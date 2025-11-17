@@ -1,12 +1,30 @@
 <?php
 declare(strict_types=1);
 
+function build_nav_link(string $href, string $label, string $currentScript, bool $matchCurrent = true): string
+{
+    $targetScript = basename(parse_url($href, PHP_URL_PATH) ?? '') ?: trim($href, '/');
+    $isActive = $matchCurrent && $targetScript !== '' && $targetScript === $currentScript;
+    $classes = ['nav-link'];
+    if ($isActive) {
+        $classes[] = 'nav-link-active';
+    }
+
+    return sprintf(
+        '<a class="%s" href="%s">%s</a>',
+        implode(' ', $classes),
+        $href,
+        h($label)
+    );
+}
+
 function render_header(string $title = 'Deepfake Defense'): void
 {
     global $config;
     $appName = $config['app']['name'] ?? 'Deepfake Defense Training';
     $user = current_user();
     $flash = get_flash();
+    $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '') ?: 'index.php';
     ?>
     <!doctype html>
     <html lang="en">
@@ -21,16 +39,16 @@ function render_header(string $title = 'Deepfake Defense'): void
         <div class="logo"><?= h($appName) ?></div>
         <nav>
             <?php if ($user): ?>
-                <a href="/dashboard.php">Dashboard</a>
-                <a href="/game.php">Game</a>
-                <a href="/video.php">Video</a>
+                <?= build_nav_link('/dashboard.php', 'Dashboard', $currentScript) ?>
+                <?= build_nav_link('/game.php', 'Game', $currentScript) ?>
+                <?= build_nav_link('/video.php', 'Video', $currentScript) ?>
                 <?php if ((int)$user['is_admin'] === 1): ?>
-                    <a href="/admin.php">Admin</a>
+                    <?= build_nav_link('/admin.php', 'Admin', $currentScript) ?>
                 <?php endif; ?>
-                <a href="/logout.php">Logout (<?= h($user['username']) ?>)</a>
+                <?= build_nav_link('/logout.php', 'Logout (' . $user['username'] . ')', $currentScript, false) ?>
             <?php else: ?>
-                <a href="/login.php">Sign In</a>
-                <a href="/register.php">Create Account</a>
+                <?= build_nav_link('/login.php', 'Sign In', $currentScript) ?>
+                <?= build_nav_link('/register.php', 'Create Account', $currentScript) ?>
             <?php endif; ?>
         </nav>
     </header>

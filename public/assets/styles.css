@@ -22,6 +22,7 @@ body {
 
 a {
     color: var(--primary);
+    text-decoration: none;
 }
 
 header {
@@ -32,6 +33,12 @@ header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+header nav {
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
 }
 
 .logo {
@@ -151,5 +158,74 @@ td {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.nav-link {
+    color: var(--muted);
+    padding: 0.4rem 0.95rem;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    transition: color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.nav-link:hover {
+    color: var(--primary);
+    transform: translateY(-1px);
+}
+
+.nav-link-active {
+    background: linear-gradient(120deg, var(--accent), var(--primary));
+    color: #041224;
+    box-shadow: 0 8px 20px rgba(0, 255, 198, 0.25);
+}
+
+.form-scenario label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.form-scenario input[type="text"],
+.form-scenario textarea {
+    width: 100%;
+    font-size: 1rem;
+    padding: 1rem;
+    border-radius: 0.75rem;
+}
+
+.form-scenario textarea {
+    min-height: 220px;
+}
+
+.form-inline {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.form-inline label {
+    flex: 1;
+    min-width: 200px;
+}
+
+.form-auth {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.form-auth label {
+    font-size: 0.85rem;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+}
+
+.form-auth input {
+    margin-bottom: 0.9rem;
+    width: 100%;
 }
 

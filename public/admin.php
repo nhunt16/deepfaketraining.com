@@ -8,6 +8,8 @@ require_admin();
 
 $pdo = db();
 
+$redirectScenarioId = null;
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
@@ -22,23 +24,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$title, $description, current_user()['id']]);
             set_flash('Scenario created.', 'success');
         }
-    } elseif ($action === 'upload_media') {
+    } elseif ($action === 'update_scenario') {
         $scenarioId = (int)($_POST['scenario_id'] ?? 0);
+        $redirectScenarioId = $scenarioId;
+        $title = trim($_POST['title'] ?? '');
+        $description = trim($_POST['description'] ?? '');
+
+        if ($scenarioId <= 0) {
+            set_flash('Select a scenario to update.', 'danger');
+        } elseif ($title === '') {
+            set_flash('Title cannot be empty.', 'danger');
+        } else {
+            $stmt = $pdo->prepare('UPDATE scenarios SET title = ?, description = ? WHERE id = ?');
+            $stmt->execute([$title, $description, $scenarioId]);
+            set_flash('Scenario updated.', 'success');
+        }
+    } elseif ($action === 'add_clip') {
+        $scenarioId = (int)($_POST['scenario_id'] ?? 0);
+        $redirectScenarioId = $scenarioId;
         $label = trim($_POST['label'] ?? '');
         $mediaType = $_POST['media_type'] ?? 'audio';
         $isDeepfake = isset($_POST['is_deepfake']) ? 1 : 0;
+        $mediaFile = $_FILES['media'] ?? null;
+        $uploadError = $mediaFile['error'] ?? UPLOAD_ERR_NO_FILE;
 
         if ($scenarioId <= 0 || $label === '') {
             set_flash('Scenario and label are required.', 'danger');
-        } elseif (empty($_FILES['media']['tmp_name'])) {
-            set_flash('Please attach a media file.', 'danger');
+        } elseif ($uploadError !== UPLOAD_ERR_OK) {
+            set_flash('Upload failed: ' . upload_error_message($uploadError), 'danger');
+        } elseif (empty($mediaFile['tmp_name']) || !is_uploaded_file($mediaFile['tmp_name'])) {
+            set_flash('Temporary upload file missing or invalid.', 'danger');
         } else {
-            $filePath = $_FILES['media']['tmp_name'];
+            $filePath = $mediaFile['tmp_name'];
             $data = file_get_contents($filePath);
             if ($data === false) {
                 set_flash('Unable to read the media file.', 'danger');
             } else {
-                $mime = mime_content_type($filePath) ?: ($_FILES['media']['type'] ?? 'application/octet-stream');
+                $mime = mime_content_type($filePath) ?: ($mediaFile['type'] ?? 'application/octet-stream');
 
                 $stmt = $pdo->prepare(
                     'INSERT INTO scenario_media (scenario_id, label, media_type, mime_type, media_data, is_deepfake)
@@ -55,69 +77,192 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 set_flash('Media uploaded.', 'success');
             }
         }
+    } elseif ($action === 'delete_clip') {
+        $clipId = (int)($_POST['clip_id'] ?? 0);
+        $scenarioId = (int)($_POST['scenario_id'] ?? 0);
+        $redirectScenarioId = $scenarioId;
+
+        if ($clipId <= 0 || $scenarioId <= 0) {
+            set_flash('Clip not found.', 'danger');
+        } else {
+            $stmt = $pdo->prepare('DELETE FROM scenario_media WHERE id = ? AND scenario_id = ?');
+            $stmt->execute([$clipId, $scenarioId]);
+            if ($stmt->rowCount() > 0) {
+                set_flash('Clip deleted.', 'success');
+            } else {
+                set_flash('Clip not found.', 'warning');
+            }
+        }
     }
 
-    redirect('/admin.php');
+    $target = '/admin.php';
+    if ($redirectScenarioId) {
+        $target .= '?scenario_id=' . urlencode((string)$redirectScenarioId);
+    }
+    redirect($target);
 }
 
 $scenarios = $pdo->query('SELECT id, title FROM scenarios ORDER BY created_at DESC')->fetchAll();
+$activeScenarioId = isset($_GET['scenario_id']) ? (int)$_GET['scenario_id'] : (int)($scenarios[0]['id'] ?? 0);
+$activeScenario = null;
+$scenarioClips = [];
+
+if ($activeScenarioId > 0) {
+    $scenarioStmt = $pdo->prepare('SELECT id, title, description FROM scenarios WHERE id = ?');
+    $scenarioStmt->execute([$activeScenarioId]);
+    $activeScenario = $scenarioStmt->fetch();
+
+    if ($activeScenario) {
+        $clipsStmt = $pdo->prepare('SELECT id, label, media_type, is_deepfake, created_at FROM scenario_media WHERE scenario_id = ? ORDER BY id DESC');
+        $clipsStmt->execute([$activeScenarioId]);
+        $scenarioClips = $clipsStmt->fetchAll();
+    } else {
+        $activeScenarioId = 0;
+    }
+}
 
 render_header('Admin Console');
 ?>
-<section class="panel grid grid-2">
-    <div>
-        <h2>Create scenario</h2>
-        <form method="post">
-            <input type="hidden" name="action" value="create_scenario">
-            <label>
-                Title
-                <input type="text" name="title" required>
+<section class="panel">
+    <h2>Create Scenario</h2>
+    <form method="post" class="form-scenario">
+        <input type="hidden" name="action" value="create_scenario">
+        <label>
+            Title
+            <input type="text" name="title" required>
+        </label>
+        <label>
+            Description
+            <textarea name="description" rows="6"></textarea>
+        </label>
+        <button type="submit">Create scenario</button>
+    </form>
+</section>
+
+<section class="panel" style="margin-top:2rem;">
+    <h2>Edit Scenario</h2>
+    <?php if (!$scenarios): ?>
+        <p>Create a scenario first.</p>
+    <?php else: ?>
+        <form method="get" style="margin-bottom:1rem;">
+            <label style="display:flex; flex-direction:column; gap:0.5rem;">
+                Select scenario
+                <select name="scenario_id" onchange="this.form.submit()">
+                    <?php foreach ($scenarios as $scenario): ?>
+                        <option value="<?= h((string)$scenario['id']) ?>" <?= (int)$scenario['id'] === $activeScenarioId ? 'selected' : '' ?>>
+                            <?= h($scenario['title']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </label>
-            <label>
-                Description
-                <textarea name="description" rows="4"></textarea>
-            </label>
-            <button type="submit">Create scenario</button>
         </form>
-    </div>
-    <div>
-        <h2>Upload media</h2>
-        <?php if (!$scenarios): ?>
-            <p>Create a scenario first.</p>
-        <?php else: ?>
+        <?php if ($activeScenario): ?>
+            <form method="post" class="form-scenario">
+                <input type="hidden" name="action" value="update_scenario">
+                <input type="hidden" name="scenario_id" value="<?= h((string)$activeScenario['id']) ?>">
+                <label>
+                    Title
+                    <input type="text" name="title" value="<?= h($activeScenario['title']) ?>" required>
+                </label>
+                <label>
+                    Description
+                    <textarea name="description" rows="6"><?= h($activeScenario['description'] ?? '') ?></textarea>
+                </label>
+                <button type="submit">Save changes</button>
+            </form>
+            <hr style="margin:2rem 0; border:0; border-top:1px solid rgba(255,255,255,0.1);">
+            <h3>Add Clip</h3>
             <form method="post" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="upload_media">
-                <label>
-                    Scenario
-                    <select name="scenario_id" required>
-                        <?php foreach ($scenarios as $scenario): ?>
-                            <option value="<?= h((string)$scenario['id']) ?>"><?= h($scenario['title']) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
-                <label>
-                    Clip label
-                    <input type="text" name="label" required>
-                </label>
-                <label>
-                    Media type
-                    <select name="media_type">
-                        <option value="audio">Audio</option>
-                        <option value="video">Video</option>
-                    </select>
-                </label>
-                <label>
-                    File
-                    <input type="file" name="media" accept="audio/*,video/*" required>
-                </label>
+                <input type="hidden" name="action" value="add_clip">
+                <input type="hidden" name="scenario_id" value="<?= h((string)$activeScenario['id']) ?>">
+                <div class="form-inline">
+                    <label>
+                        Clip label
+                        <input type="text" name="label" required>
+                    </label>
+                    <label>
+                        Media type
+                        <select name="media_type">
+                            <option value="audio">Audio</option>
+                            <option value="video">Video</option>
+                        </select>
+                    </label>
+                    <label>
+                        File
+                        <input type="file" name="media" accept="audio/*,video/*" required>
+                    </label>
+                </div>
                 <label style="display:flex; align-items:center; gap:0.5rem;">
                     <input type="checkbox" name="is_deepfake">
                     Mark as deepfake
                 </label>
                 <button type="submit">Upload clip</button>
             </form>
+            <hr style="margin:2rem 0; border:0; border-top:1px solid rgba(255,255,255,0.1);">
+            <h3>Clips for "<?= h($activeScenario['title']) ?>"</h3>
+            <?php if ($scenarioClips): ?>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Label</th>
+                        <th>Type</th>
+                        <th>Deepfake?</th>
+                        <th>Length</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ($scenarioClips as $clip): ?>
+                        <tr>
+                            <td><?= h($clip['label']) ?></td>
+                            <td><?= h(ucfirst($clip['media_type'])) ?></td>
+                            <td><?= $clip['is_deepfake'] ? 'Yes' : 'No' ?></td>
+                            <td>
+                                <span id="clip-duration-<?= h((string)$clip['id']) ?>">--:--</span>
+                                <?php if ($clip['media_type'] === 'video'): ?>
+                                    <video preload="metadata" data-duration-for="<?= h((string)$clip['id']) ?>" style="display:none;">
+                                        <source src="/media.php?id=<?= h((string)$clip['id']) ?>">
+                                    </video>
+                                <?php else: ?>
+                                    <audio preload="metadata" data-duration-for="<?= h((string)$clip['id']) ?>" style="display:none;">
+                                        <source src="/media.php?id=<?= h((string)$clip['id']) ?>">
+                                    </audio>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <form method="post" onsubmit="return confirm('Delete this clip?');" style="display:inline;">
+                                    <input type="hidden" name="action" value="delete_clip">
+                                    <input type="hidden" name="clip_id" value="<?= h((string)$clip['id']) ?>">
+                                    <input type="hidden" name="scenario_id" value="<?= h((string)$activeScenario['id']) ?>">
+                                    <button type="submit" class="btn" style="background:#ff4d6d; color:#fff; padding:0.35rem 0.75rem;">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+                <script>
+                    document.addEventListener('DOMContentLoaded', () => {
+                        document.querySelectorAll('[data-duration-for]').forEach(mediaEl => {
+                            mediaEl.addEventListener('loadedmetadata', () => {
+                                const id = mediaEl.dataset.durationFor;
+                                const target = document.getElementById('clip-duration-' + id);
+                                if (!target || Number.isNaN(mediaEl.duration) || !Number.isFinite(mediaEl.duration)) {
+                                    return;
+                                }
+                                const totalSeconds = Math.max(0, mediaEl.duration);
+                                const minutes = Math.floor(totalSeconds / 60);
+                                const seconds = Math.round(totalSeconds % 60).toString().padStart(2, '0');
+                                target.textContent = `${minutes}:${seconds}`;
+                            }, { once: true });
+                        });
+                    });
+                </script>
+            <?php else: ?>
+                <p>No clips uploaded yet.</p>
+            <?php endif; ?>
         <?php endif; ?>
-    </div>
+    <?php endif; ?>
 </section>
 <?php
 render_footer();
