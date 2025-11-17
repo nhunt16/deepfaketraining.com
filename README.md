@@ -52,5 +52,3 @@ Visit `http://localhost:8000`. Register a learner account or log in as the admin
 - **Interactive gameplay** – Pick a scenario, stream the stored audio/video clips directly from MySQL, and log guesses/accuracy.
 - **Progress tracking** – Dashboard aggregates part 1 accuracy plus part 2 video completion status.
 - **Admin console** – Upload unlimited scenarios and label which media file is the deepfake.
-- **Security-first styling** – Dark, cyber-inspired UI with responsive layout.
-
