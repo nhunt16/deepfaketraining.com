@@ -1,0 +1,21 @@
+# Environment-specific config
+config.local.php
+.env
+.env.*
+
+# Local PHP overrides / debug files
+public/phpinfo.php
+public/.user.ini
+
+# Media/source assets not meant for repo
+source*/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+
+# Composer / vendor (if ever added)
+vendor/
+composer.lock
+

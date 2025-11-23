@@ -35,11 +35,22 @@ Run the script again any time you update the source files; duplicates are avoide
 
 ## Configure credentials
 
-The application reads MySQL settings from environment variables (`DB_HOST`, `DB_NAME`, etc.). For quick local development, edit `/Users/nhunt/Desktop/deepfaketraining.com/config.php` and adjust the defaults.
+The application reads MySQL settings from environment variables (`DB_HOST`, `DB_NAME`, etc.). For quick local development, edit the base `config.php` or, preferably, copy `config.local.example.php` to `config.local.php` and override only the settings that differ from the defaults. `config.local.php` is git-ignored so production secrets never leave the server.
 
 ### Beta access gate
 
 All pages are protected by a beta key so unpublished builds stay private. Update `app.beta_key` inside `config.php` (default `BetaKeyChangeMe`) and share it only with trusted testers. Anyone visiting the site will be redirected to `/beta.php` until they enter the key; once verified, their session proceeds normally and a secure cookie keeps them authorized for 30 days (unless you change the key). Clear the session via the “Reset beta session” link on that page or by deleting the browser cookies.
+
+## Install PHP dependencies
+
+The project relies on Google Cloud Text-to-Speech through Composer. Install vendor libraries (per environment):
+
+```bash
+cd /Users/nhunt/Desktop/deepfaketraining.com
+composer install
+```
+
+(`vendor/` remains git-ignored, so this step is required on every machine that runs the app.)
 
 ## Run locally
 
@@ -56,3 +67,20 @@ Visit `http://localhost:8000`. Register a learner account or log in as the admin
 - **Interactive gameplay** – Pick a scenario, stream the stored audio/video clips directly from MySQL, and log guesses/accuracy.
 - **Progress tracking** – Dashboard aggregates part 1 accuracy plus part 2 video completion status.
 - **Admin console** – Upload unlimited scenarios and label which media file is the deepfake.
+- **Mission console + voicemail lab** – `/console.php` includes a scripted terminal challenge and a Google Cloud Text-to-Speech powered voicemail generator.
+
+## Google Cloud Text-to-Speech setup
+
+1. Enable the **Cloud Text-to-Speech API** in your Google Cloud project.
+2. Create a service account, grant it permission to call the API, and download its JSON key.
+3. On every environment that needs TTS, install Composer dependencies and set:
+
+   ```bash
+   export GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json
+   ```
+
+   If you prefer not to export the variable manually, update `app.google_credentials_path` in `config.php` (or `config.local.php`) to point to the JSON file; the bootstrapper will set the env variable automatically when it detects a readable path.
+
+4. Optionally customize the default voice in `config.php` (`app.tts_voice`) or override it via `config.local.php`.
+
+If dependencies or credentials are missing, the voicemail generator will respond with an error rather than attempting synthesis.
