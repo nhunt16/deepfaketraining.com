@@ -9,6 +9,11 @@ const CONSOLE_STATE_KEY = 'mission_console';
 const PAYLOAD_CONSOLE_KEY = 'payload_console';
 const PAYLOAD_REQUIRED_IP = '35.233.136.83';
 const PAYLOAD_IWR_URI = 'https://raw.githubusercontent.com/enigma0x3/Generate-Macro/refs/heads/master/Generate-Macro.ps1';
+const LISTENER_STATE_KEY = 'listener_console';
+const LISTENER_SHELL_PROMPT = '└─$ ';
+const LISTENER_SHELL_HEADER = '┌──(kali㉿kali)-[~/Downloads/Generate-Macro]';
+const LISTENER_MSF_PROMPT = 'msf > ';
+const LISTENER_MSF_EXPLOIT_PROMPT = 'msf exploit(multi/handler) > ';
 
 function normalize_terminal_output(string $text): string
 {
@@ -173,6 +178,177 @@ function payload_reset(): array
     $state = payload_default_state();
     payload_save_state($state);
     return $state;
+}
+
+function listener_default_state(): array
+{
+    return [
+        'msf_active' => false,
+        'msf_context' => 'shell',
+        'lhost' => '',
+        'lport' => '4444',
+        'handler_waiting' => false,
+        'bind_host' => null,
+    ];
+}
+
+function listener_state(): array
+{
+    if (!isset($_SESSION[LISTENER_STATE_KEY]) || !is_array($_SESSION[LISTENER_STATE_KEY])) {
+        $_SESSION[LISTENER_STATE_KEY] = listener_default_state();
+    }
+
+    return $_SESSION[LISTENER_STATE_KEY];
+}
+
+function listener_save_state(array $state): void
+{
+    $_SESSION[LISTENER_STATE_KEY] = $state;
+}
+
+function listener_reset(): array
+{
+    $state = listener_default_state();
+    listener_save_state($state);
+    return $state;
+}
+
+function listener_shell_error(string $command): string
+{
+    $token = trim(strtok($command, " \t")) ?: trim($command);
+    if ($token === '') {
+        $token = 'command';
+    }
+    return "{$token}: command not found";
+}
+
+function listener_is_msf_command(string $command): bool
+{
+    $trimmed = trim($command);
+    if ($trimmed === '') {
+        return false;
+    }
+
+    $lower = strtolower($trimmed);
+    $directMatches = [
+        'use',
+        'options',
+        'info',
+        'info -d',
+        'run',
+        'exploit',
+        'help',
+        'exit',
+    ];
+
+    foreach ($directMatches as $match) {
+        if ($lower === $match) {
+            return true;
+        }
+    }
+
+    $prefixMatches = [
+        'use ',
+        'set ',
+        'info ',
+    ];
+
+    foreach ($prefixMatches as $prefix) {
+        if (str_starts_with($lower, $prefix)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function listener_current_prompt(array $state): string
+{
+    if (!($state['msf_active'] ?? false)) {
+        return LISTENER_SHELL_PROMPT;
+    }
+
+    return ($state['msf_context'] ?? 'root') === 'exploit'
+        ? LISTENER_MSF_EXPLOIT_PROMPT
+        : LISTENER_MSF_PROMPT;
+}
+
+function listener_info_text(): string
+{
+    return <<<'INFO'
+       Name: Generic Payload Handler
+     Module: exploit/multi/handler
+   Platform: Android, Apple_iOS, BSD, Java, JavaScript, Linux, OSX, NodeJS, PHP, Python, Ruby, Solaris, Unix, Windows, Mainframe, Multi
+       Arch: x86, x86_64, x64, mips, mipsle, mipsbe, mips64, mips64le, ppc, ppce500v2, ppc64, ppc64le, cbea, cbea64, sparc, sparc64, armle, armbe, aarch64, cmd, php, tty, java, ruby, dalvik, python, nodejs, firefox, zarch, r, riscv32be, riscv32le, riscv64be, riscv64le, loongarch64
+ Privileged: No
+    License: Metasploit Framework License (BSD)
+       Rank: Manual
+
+Provided by:
+  hdm <x@hdm.io>
+  bcook-r7
+
+Module side effects:
+ unknown-side-effects
+
+Module stability:
+ unknown-stability
+
+Module reliability:
+ unknown-reliability
+
+Available targets:
+      Id  Name
+      --  ----
+  =>  0   Wildcard Target
+
+Check supported:
+  No
+
+Payload information:
+  Space: 10000000
+  Avoid: 0 characters
+
+Description:
+  This module is a stub that provides all of the
+  features of the Metasploit payload system to exploits
+  that have been launched outside of the framework.
+
+View the full module info with the info -d command.
+INFO;
+}
+
+function listener_option_column(string $value, int $width = 15): string
+{
+    if ($value === '') {
+        return str_repeat(' ', $width);
+    }
+
+    return str_pad($value, $width, ' ', STR_PAD_RIGHT);
+}
+
+function listener_options_text(array $state): string
+{
+    $host = listener_option_column($state['lhost'] ?? '');
+    $port = listener_option_column($state['lport'] ?? '4444');
+
+    return <<<OPTS
+                                                                                   
+Payload options (generic/shell_reverse_tcp):                                       
+                                                                                   
+   Name   Current Setting  Required  Description                                   
+   ----   ---------------  --------  -----------                                   
+   LHOST  {$host}  yes       The listen address (an interface may be spec  
+                                     ified)                                       
+   LPORT  {$port}  yes       The listen port
+
+Exploit target:
+   Id  Name
+   --  ----
+   0   Wildcard Target
+
+View the full module info with the info, or info -d command.
+OPTS;
 }
 
 function handle_console_command(string $command, array $state): array
@@ -556,6 +732,208 @@ function payload_handle_macro_input(string $command, array $state): array
     ];
 }
 
+function listener_handle_command(string $command, array $state): array
+{
+    $command = trim($command);
+    $output = '';
+    $clear = false;
+    $awaitingPrompt = $state['handler_waiting'] ?? false;
+    $promptText = $awaitingPrompt ? '' : listener_current_prompt($state);
+
+    if ($command === '__CTRL_C__') {
+        if ($state['handler_waiting'] ?? false) {
+            $state['handler_waiting'] = false;
+            $output = "^C[-] Exploit failed [user-interrupt]: Interrupt\n[-] run: Interrupted";
+        } else {
+            $output = '^C';
+        }
+
+        return [
+            'state' => $state,
+            'output' => normalize_terminal_output($output),
+            'clear' => false,
+            'prompt_again' => false,
+            'prompt_text' => listener_current_prompt($state),
+            'awaiting_prompt' => false,
+        ];
+    }
+
+    if ($command === '') {
+        return [
+            'state' => $state,
+            'output' => '',
+            'clear' => false,
+            'prompt_again' => false,
+            'prompt_text' => $awaitingPrompt ? '' : listener_current_prompt($state),
+            'awaiting_prompt' => $awaitingPrompt,
+        ];
+    }
+
+    $isMsfCommand = listener_is_msf_command($command);
+
+    if (!($state['msf_active'] ?? false) && $isMsfCommand) {
+        return [
+            'state' => $state,
+            'output' => normalize_terminal_output(listener_shell_error($command)),
+            'clear' => false,
+            'prompt_again' => false,
+            'prompt_text' => LISTENER_SHELL_PROMPT,
+            'awaiting_prompt' => false,
+        ];
+    }
+
+    if (!($state['msf_active'] ?? false)) {
+        switch (true) {
+            case in_array(strtolower($command), ['clear', 'cls'], true):
+                $clear = true;
+                $output = 'Screen cleared.';
+                break;
+            case strcasecmp($command, 'reset') === 0:
+                $state = listener_reset();
+                $output = 'Listener lab reset.';
+                break;
+            case strcasecmp($command, 'msfconsole') === 0:
+                $state['msf_active'] = true;
+                $state['msf_context'] = 'root';
+                $state['handler_waiting'] = false;
+                $promptText = LISTENER_MSF_PROMPT;
+                break;
+            default:
+                $output = listener_shell_error($command);
+                break;
+        }
+
+        return [
+            'state' => $state,
+            'output' => normalize_terminal_output($output),
+            'clear' => $clear,
+            'prompt_again' => false,
+            'prompt_text' => $state['msf_active'] ? LISTENER_MSF_PROMPT : LISTENER_SHELL_PROMPT,
+            'awaiting_prompt' => false,
+        ];
+    }
+
+    if ($state['handler_waiting'] ?? false) {
+        return [
+            'state' => $state,
+            'output' => normalize_terminal_output('Handler is waiting for a session. Press Ctrl+C to stop.'),
+            'clear' => false,
+            'prompt_again' => false,
+            'prompt_text' => '',
+            'awaiting_prompt' => true,
+        ];
+    }
+
+    $lower = strtolower($command);
+    $moduleRequired = fn () => ($state['msf_context'] ?? 'root') === 'exploit';
+    switch (true) {
+        case $lower === 'help':
+            $output = "Core commands:\n  use exploit/multi/handler\n  info\n  options\n  set LHOST <ip>\n  set LPORT <port>\n  run | exploit\n  exit";
+            break;
+        case $lower === 'details':
+            $output = '[-] Unknown command: details. Run the help command for more details.';
+            break;
+        case $lower === 'info':
+        case $lower === 'info -d':
+            $output = listener_info_text();
+            break;
+        case $lower === 'options':
+            if (!$moduleRequired()) {
+                $output = "[-] Select a module first with: use exploit/multi/handler";
+                break;
+            }
+            $output = listener_options_text($state);
+            break;
+        case $lower === 'use exploit/multi/handler':
+            $state['msf_context'] = 'exploit';
+            $output = '[*] Using configured payload generic/shell_reverse_tcp';
+            $promptText = LISTENER_MSF_EXPLOIT_PROMPT;
+            break;
+        case preg_match('/^set\s+(lhost|lport)\s+(.+)$/i', $command, $matches) === 1:
+            if (!$moduleRequired()) {
+                $output = "[-] Select a module first with: use exploit/multi/handler";
+                break;
+            }
+            $param = strtoupper($matches[1]);
+            $value = trim($matches[2]);
+            if ($param === 'LPORT' && !preg_match('/^\d{1,5}$/', $value)) {
+                $output = 'LPORT must be numeric.';
+                break;
+            }
+            if ($param === 'LHOST' && $value === '') {
+                $output = 'LHOST cannot be empty.';
+                break;
+            }
+            if ($param === 'LHOST') {
+                $state['lhost'] = $value;
+            } else {
+                $state['lport'] = $value;
+            }
+            $output = "{$param} => {$value}";
+            break;
+        case in_array($lower, ['run', 'exploit'], true):
+            if (!$moduleRequired()) {
+                $output = "[-] Select a module first with: use exploit/multi/handler";
+                break;
+            }
+            $result = listener_start_handler($state);
+            return $result;
+        case $lower === 'exit':
+            $state['msf_active'] = false;
+            $state['msf_context'] = 'shell';
+            $state['handler_waiting'] = false;
+            $output = '[*] Exiting msfconsole.';
+            $promptText = LISTENER_SHELL_PROMPT;
+            break;
+        default:
+            $output = "[-] Unknown command: {$command}. Run the help command for more details.";
+            break;
+    }
+
+    return [
+        'state' => $state,
+        'output' => normalize_terminal_output($output),
+        'clear' => $clear,
+        'prompt_again' => false,
+        'prompt_text' => $promptText,
+        'awaiting_prompt' => false,
+    ];
+}
+
+function listener_start_handler(array $state): array
+{
+    if (($state['lhost'] ?? '') === '' || ($state['lport'] ?? '') === '') {
+        return [
+            'state' => $state,
+            'output' => normalize_terminal_output('[-] You must set LHOST and LPORT before starting the listener.'),
+            'clear' => false,
+            'prompt_again' => false,
+            'prompt_text' => listener_current_prompt($state),
+            'awaiting_prompt' => false,
+        ];
+    }
+
+    $lines = [];
+    if (($state['lhost'] ?? '') === PAYLOAD_REQUIRED_IP) {
+        $lines[] = "[-] Handler failed to bind to {$state['lhost']}:{$state['lport']}: -  -";
+        $state['bind_host'] = '0.0.0.0';
+    } else {
+        $state['bind_host'] = $state['lhost'];
+    }
+    $bind = $state['bind_host'] ?: '0.0.0.0';
+    $lines[] = "[*] Started reverse TCP handler on {$bind}:{$state['lport']} ";
+    $state['handler_waiting'] = true;
+
+    return [
+        'state' => $state,
+        'output' => normalize_terminal_output(implode("\n", $lines)),
+        'clear' => false,
+        'prompt_again' => false,
+        'prompt_text' => '',
+        'awaiting_prompt' => true,
+    ];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $command = $_POST['command'] ?? '';
@@ -564,6 +942,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $state = payload_state();
         $result = payload_handle_command($command, $state);
         payload_save_state($result['state']);
+    } elseif ($target === 'listener') {
+        $state = listener_state();
+        $result = listener_handle_command($command, $state);
+        listener_save_state($result['state']);
     } else {
         $state = console_state();
         $result = handle_console_command($command, $state);
@@ -619,9 +1001,29 @@ render_header('Simulation Lab');
             <code>Generate-Macro.ps1</code> toolkit, and compile the trojan according to the briefing.
         </p>
         <ol>
-            <li>Run <code>ipconfig</code> to confirm the IPv4 address.</li>
-            <li>Download the macro builder with <code>Invoke-WebRequest -Uri <?= h(PAYLOAD_IWR_URI) ?> -OutFile .\Generate-Macro.ps1</code>.</li>
-            <li>Launch <code>.\Generate-Macro.ps1</code> and provide the IP, port, document name, attack, and payload selections.</li>
+            <li>
+                Run
+                <span class="copyable-command">
+                    <code class="command-hint">ipconfig</code>
+                    <button type="button" class="copy-cmd" data-command="ipconfig" aria-label="Copy ipconfig command">⧉</button>
+                </span>
+                to confirm the IPv4 address.
+            </li>
+            <li>
+                Download the macro builder with
+                <span class="copyable-command">
+                    <code class="command-hint">Invoke-WebRequest -Uri <?= h(PAYLOAD_IWR_URI) ?> -OutFile .\Generate-Macro.ps1</code>
+                    <button type="button" class="copy-cmd" data-command="Invoke-WebRequest -Uri <?= h(PAYLOAD_IWR_URI) ?> -OutFile .\Generate-Macro.ps1" aria-label="Copy Invoke-WebRequest command">⧉</button>
+                </span>.
+            </li>
+            <li>
+                Launch
+                <span class="copyable-command">
+                    <code class="command-hint">.\Generate-Macro.ps1</code>
+                    <button type="button" class="copy-cmd" data-command=".\Generate-Macro.ps1" aria-label="Copy macro launch command">⧉</button>
+                </span>
+                and provide the IP, port, document name, attack, and payload selections.
+            </li>
         </ol>
     </div>
     <div class="terminal-card">
@@ -635,30 +1037,6 @@ render_header('Simulation Lab');
     </div>
 </section>
 
-<section class="panel console-wrapper">
-    <div>
-        <h1>Mission Console</h1>
-        <p>
-            Practice reasoning through suspicious infrastructure by using this contained
-            terminal. Nothing you type reaches a real machine&mdash;responses are scripted to
-            reinforce investigative instincts.
-        </p>
-        <ul>
-            <li>Use <code>help</code>, <code>ls</code>, <code>cat</code>, and <code>hint</code>.</li>
-            <li>Find the safeguard phrase hidden in the logs.</li>
-            <li><code>reset</code> will restore the sandbox.</li>
-        </ul>
-    </div>
-    <div class="terminal-card">
-        <div class="terminal-toolbar">
-            <span class="indicator"></span>
-            <span class="indicator yellow"></span>
-            <span class="indicator green"></span>
-            <span class="terminal-title">synthetic-node</span>
-        </div>
-        <div id="console-terminal" class="terminal-window" aria-label="Training terminal"></div>
-    </div>
-</section>
 <section class="panel voicemail-card">
     <div>
         <h2>Generate Voicemail</h2>
@@ -738,167 +1116,32 @@ render_header('Simulation Lab');
         <audio id="voicemail-audio" controls hidden></audio>
     </form>
 </section>
+<section class="panel">
+    <div>
+        <h2>Start Listener</h2>
+        <p>
+            Bring up a simulated Kali terminal and arm <code class="command-hint">msfconsole</code> to catch the returning shell.
+            Configure the multi/handler module with the same callback IP/port you embedded in the payload,
+            then keep the listener running while the mission plays out.
+        </p>
+        <ol>
+            <li>Launch <code class="command-hint">msfconsole</code> and load <code class="command-hint">use exploit/multi/handler</code>.</li>
+            <li>Inspect <code class="command-hint">info</code> / <code class="command-hint">options</code>, then <code class="command-hint">set LHOST</code> and <code class="command-hint">set LPORT</code>.</li>
+            <li>Run the handler with <code class="command-hint">run</code> (or <code class="command-hint">exploit</code>) and leave it waiting for the reverse shell.</li>
+        </ol>
+    </div>
+    <div class="terminal-card">
+        <div class="terminal-toolbar">
+            <span class="indicator"></span>
+            <span class="indicator yellow"></span>
+            <span class="indicator green"></span>
+            <span class="terminal-title">kali-listener</span>
+        </div>
+        <div id="listener-terminal" class="terminal-window" aria-label="Listener terminal"></div>
+    </div>
+</section>
 <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
-<script>
-(() => {
-    const FitAddonClass = window.FitAddon?.FitAddon || window.fitAddon?.FitAddon;
-    const term = new window.Terminal({
-        theme: {
-            background: '#05060a',
-            foreground: '#e2f3ff',
-            cursor: '#00ffc6',
-        },
-        fontSize: 14,
-        rows: 18,
-        convertEol: false,
-    });
-    const container = document.getElementById('console-terminal');
-    term.open(container);
-    if (FitAddonClass) {
-        const missionFit = new FitAddonClass();
-        term.loadAddon(missionFit);
-        missionFit.fit();
-        window.addEventListener('resize', () => missionFit.fit());
-    }
-    const intro = [
-        'Deepfake Defense :: Synthetic Node 77-B',
-        'Type "help" to list training commands.'
-    ];
-    intro.forEach(line => term.writeln(line));
-
-    const missionPrompt = '> ';
-    let missionBuffer = '';
-    const missionHistory = [];
-    let missionHistoryIndex = 0;
-    let missionRowsRendered = 0;
-
-    const moveCursorToMissionStart = () => {
-        if (missionRowsRendered > 0) {
-            term.write(`\x1b[${missionRowsRendered}F`);
-        }
-        term.write('\r');
-    };
-
-    const clearMissionRendered = () => {
-        moveCursorToMissionStart();
-        for (let i = 0; i <= missionRowsRendered; i++) {
-            term.write('\x1b[2K\r');
-            if (i < missionRowsRendered) {
-                term.write('\x1b[1B');
-            }
-        }
-        if (missionRowsRendered > 0) {
-            term.write(`\x1b[${missionRowsRendered}A`);
-        }
-    };
-
-    const renderMissionLine = () => {
-        clearMissionRendered();
-        term.write(`${missionPrompt}${missionBuffer}`);
-        const cols = term.cols || 80;
-        missionRowsRendered = Math.floor((missionPrompt.length + missionBuffer.length) / cols);
-    };
-
-    const writeMissionPrompt = (prependNewline = false) => {
-        missionBuffer = '';
-        missionHistoryIndex = missionHistory.length;
-        missionRowsRendered = 0;
-        if (prependNewline) {
-            term.write('\r\n');
-        }
-        term.write(missionPrompt);
-    };
-
-    writeMissionPrompt(false);
-
-    term.onPaste?.((data) => {
-        if (!data) return;
-        missionBuffer += data.replace(/\r/g, '');
-        renderMissionLine();
-    });
-
-    term.onKey(({key, domEvent}) => {
-        const printable = !domEvent.altKey && !domEvent.ctrlKey && !domEvent.metaKey;
-        if (domEvent.key === 'Enter') {
-            domEvent.preventDefault();
-            const commandText = missionBuffer;
-            clearMissionRendered();
-            term.write(`${missionPrompt}${commandText}\r\n`);
-            const command = missionBuffer.trim();
-            if (command.length === 0) {
-                writeMissionPrompt(false);
-                return;
-            }
-            missionHistory.push(command);
-            missionHistoryIndex = missionHistory.length;
-            window.fetch('/simulation.php', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: new URLSearchParams({command, target: 'mission'}),
-            })
-                .then((resp) => resp.json())
-                .then((data) => {
-                    if (data.clear) {
-                        term.clear();
-                    }
-                    if (data.output) {
-                        term.writeln(data.output);
-                    }
-                    writeMissionPrompt(false);
-                })
-                .catch(() => {
-                    term.writeln('Error: unable to reach the training host.');
-                    writeMissionPrompt(false);
-                });
-        } else if (domEvent.key === 'Backspace') {
-            domEvent.preventDefault();
-            if (missionBuffer.length > 0) {
-                missionBuffer = missionBuffer.slice(0, -1);
-                renderMissionLine();
-            }
-        } else if (domEvent.key === 'ArrowUp') {
-            domEvent.preventDefault();
-            if (missionHistory.length === 0) {
-                return;
-            }
-            if (missionHistoryIndex > 0) {
-                missionHistoryIndex -= 1;
-            }
-            missionBuffer = missionHistory[missionHistoryIndex] ?? '';
-            renderMissionLine();
-        } else if (domEvent.key === 'ArrowDown') {
-            domEvent.preventDefault();
-            if (missionHistoryIndex < missionHistory.length - 1) {
-                missionHistoryIndex += 1;
-                missionBuffer = missionHistory[missionHistoryIndex] ?? '';
-            } else {
-                missionHistoryIndex = missionHistory.length;
-                missionBuffer = '';
-            }
-            renderMissionLine();
-        } else if ((domEvent.ctrlKey || domEvent.metaKey) && domEvent.key.toLowerCase() === 'c') {
-            domEvent.preventDefault();
-            clearMissionRendered();
-            term.writeln('^C');
-            writeMissionPrompt(false);
-        } else if ((domEvent.ctrlKey || domEvent.metaKey) && domEvent.key.toLowerCase() === 'v') {
-            if (navigator.clipboard?.readText) {
-                navigator.clipboard.readText().then((text) => {
-                    if (!text) return;
-                    missionBuffer += text.replace(/\r/g, '');
-                    renderMissionLine();
-                }).catch(() => {});
-            }
-        } else if (printable && key.length === 1) {
-            missionBuffer += key;
-            renderMissionLine();
-        }
-    });
-})();
-</script>
 <script>
 (() => {
     const form = document.getElementById('voicemail-form');
@@ -985,6 +1228,19 @@ render_header('Simulation Lab');
             .finally(() => {
                 submitBtn.disabled = false;
             });
+    });
+})();
+
+(() => {
+    document.querySelectorAll('.copy-cmd').forEach((button) => {
+        button.addEventListener('click', () => {
+            const command = button.dataset.command || '';
+            if (!command) return;
+            navigator.clipboard?.writeText(command).then(() => {
+                button.classList.add('copied');
+                setTimeout(() => button.classList.remove('copied'), 1200);
+            }).catch(() => {});
+        });
     });
 })();
 
@@ -1204,6 +1460,232 @@ render_header('Simulation Lab');
         } else if (printable && key.length === 1) {
             payloadBuffer += key;
             renderPayloadLine();
+        }
+    });
+})();
+
+(() => {
+    const listenerContainer = document.getElementById('listener-terminal');
+    if (!listenerContainer) return;
+    const FitAddonClass = window.FitAddon?.FitAddon || window.fitAddon?.FitAddon;
+    const listenerTerm = new window.Terminal({
+        theme: {
+            background: '#03080f',
+            foreground: '#e2f3ff',
+            cursor: '#00ffc6',
+        },
+        fontSize: 14,
+        rows: 18,
+        convertEol: false,
+    });
+    listenerTerm.open(listenerContainer);
+    if (FitAddonClass) {
+        const listenerFit = new FitAddonClass();
+        listenerTerm.loadAddon(listenerFit);
+        listenerFit.fit();
+        window.addEventListener('resize', () => listenerFit.fit());
+    }
+
+    const shellHeader = '┌──(kali㉿kali)-[~/tmp]';
+    const shellPrompt = '└─$ ';
+    let listenerPromptText = shellPrompt;
+    let listenerBuffer = '';
+    const listenerHistory = [];
+    let listenerHistoryIndex = 0;
+    let listenerRowsRendered = 0;
+    let listenerAwaitingPrompt = false;
+
+    const moveCursorToListenerStart = () => {
+        if (listenerRowsRendered > 0) {
+            listenerTerm.write(`\x1b[${listenerRowsRendered}F`);
+        }
+        listenerTerm.write('\r');
+    };
+
+    const clearListenerRendered = () => {
+        moveCursorToListenerStart();
+        for (let i = 0; i <= listenerRowsRendered; i++) {
+            listenerTerm.write('\x1b[2K\r');
+            if (i < listenerRowsRendered) {
+                listenerTerm.write('\x1b[1B');
+            }
+        }
+        if (listenerRowsRendered > 0) {
+            listenerTerm.write(`\x1b[${listenerRowsRendered}A`);
+        }
+    };
+
+    const renderListenerLine = () => {
+        clearListenerRendered();
+        const promptText = listenerPromptText ?? '';
+        listenerTerm.write(`${promptText}${listenerBuffer}`);
+        const cols = listenerTerm.cols || 80;
+        listenerRowsRendered = Math.floor(((promptText.length) + listenerBuffer.length) / cols);
+    };
+
+    const writeListenerPrompt = (prependNewline = false) => {
+        listenerBuffer = '';
+        listenerHistoryIndex = listenerHistory.length;
+        listenerRowsRendered = 0;
+        if (prependNewline) {
+            listenerTerm.write('\r\n');
+        }
+        if (!listenerAwaitingPrompt && listenerPromptText === shellPrompt) {
+            listenerTerm.writeln(shellHeader);
+        }
+        if (listenerPromptText) {
+            listenerTerm.write(listenerPromptText);
+        }
+    };
+
+    writeListenerPrompt(false);
+
+    listenerTerm.onPaste?.((data) => {
+        if (!data) return;
+        listenerBuffer += data.replace(/\r/g, '');
+        renderListenerLine();
+    });
+
+    const sendListenerCommand = (command) => {
+        window.fetch('/simulation.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({command, target: 'listener'}),
+        })
+            .then((resp) => resp.json())
+            .then((data) => {
+                if (data.clear) {
+                    listenerTerm.clear();
+                }
+                if (data.output) {
+                    listenerTerm.writeln(data.output);
+                }
+                const awaiting = !!data.awaiting_prompt;
+                if (typeof data.prompt_text === 'string' && data.prompt_text !== null) {
+                    listenerPromptText = data.prompt_text;
+                } else if (!awaiting) {
+                    listenerPromptText = shellPrompt;
+                }
+                listenerAwaitingPrompt = awaiting;
+            })
+            .catch(() => {
+                listenerTerm.writeln('Error: unable to reach the listener lab.');
+                listenerAwaitingPrompt = false;
+                listenerPromptText = shellPrompt;
+            })
+            .finally(() => {
+                if (!listenerAwaitingPrompt) {
+                    writeListenerPrompt(false);
+                } else {
+                    listenerBuffer = '';
+                    listenerHistoryIndex = listenerHistory.length;
+                    listenerRowsRendered = 0;
+                }
+            });
+    };
+
+    listenerTerm.onKey(({key, domEvent}) => {
+        const printable = !domEvent.altKey && !domEvent.ctrlKey && !domEvent.metaKey;
+        if (domEvent.key === 'Enter') {
+            domEvent.preventDefault();
+            const commandText = listenerBuffer;
+            const activePrompt = listenerPromptText || '';
+            clearListenerRendered();
+            if (activePrompt) {
+                listenerTerm.write(`${activePrompt}${commandText}\r\n`);
+            } else if (commandText.length > 0) {
+                listenerTerm.write(`${commandText}\r\n`);
+            } else {
+                listenerTerm.write('\r\n');
+            }
+            const rawCommand = listenerBuffer;
+            const trimmed = rawCommand.trim();
+            if (trimmed.length === 0) {
+                if (!listenerAwaitingPrompt) {
+                    writeListenerPrompt(false);
+                }
+                return;
+            }
+            listenerHistory.push(trimmed);
+            listenerHistoryIndex = listenerHistory.length;
+            sendListenerCommand(rawCommand);
+        } else if (domEvent.key === 'Backspace') {
+            domEvent.preventDefault();
+            if (listenerBuffer.length > 0) {
+                listenerBuffer = listenerBuffer.slice(0, -1);
+                renderListenerLine();
+            }
+        } else if (domEvent.key === 'ArrowUp') {
+            domEvent.preventDefault();
+            if (listenerHistory.length === 0) {
+                return;
+            }
+            if (listenerHistoryIndex > 0) {
+                listenerHistoryIndex -= 1;
+            }
+            listenerBuffer = listenerHistory[listenerHistoryIndex] ?? '';
+            renderListenerLine();
+        } else if (domEvent.key === 'ArrowDown') {
+            domEvent.preventDefault();
+            if (listenerHistoryIndex < listenerHistory.length - 1) {
+                listenerHistoryIndex += 1;
+                listenerBuffer = listenerHistory[listenerHistoryIndex] ?? '';
+            } else {
+                listenerHistoryIndex = listenerHistory.length;
+                listenerBuffer = '';
+            }
+            renderListenerLine();
+        } else if ((domEvent.ctrlKey || domEvent.metaKey) && domEvent.key.toLowerCase() === 'c') {
+            domEvent.preventDefault();
+            listenerBuffer = '';
+            listenerHistoryIndex = listenerHistory.length;
+            window.fetch('/simulation.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({command: '__CTRL_C__', target: 'listener'}),
+            })
+                .then((resp) => resp.json())
+                .then((data) => {
+                    if (data.clear) {
+                        listenerTerm.clear();
+                    }
+                    if (data.output) {
+                        listenerTerm.writeln(data.output);
+                    }
+                    if (typeof data.prompt_text === 'string') {
+                        listenerPromptText = data.prompt_text;
+                    } else {
+                        listenerPromptText = shellPrompt;
+                    }
+                    listenerAwaitingPrompt = !!data.awaiting_prompt;
+                })
+                .catch(() => {
+                    listenerTerm.writeln('Error: unable to reach the listener lab.');
+                    listenerAwaitingPrompt = false;
+                })
+                .finally(() => {
+                    if (!listenerAwaitingPrompt) {
+                        writeListenerPrompt(false);
+                    } else {
+                        listenerBuffer = '';
+                        listenerHistoryIndex = listenerHistory.length;
+                    }
+                });
+        } else if ((domEvent.ctrlKey || domEvent.metaKey) && domEvent.key.toLowerCase() === 'v') {
+            if (navigator.clipboard?.readText) {
+                navigator.clipboard.readText().then((text) => {
+                    if (!text) return;
+                    listenerBuffer += text.replace(/\r/g, '');
+                    renderListenerLine();
+                }).catch(() => {});
+            }
+        } else if (printable && key.length === 1) {
+            listenerBuffer += key;
+            renderListenerLine();
         }
     });
 })();
