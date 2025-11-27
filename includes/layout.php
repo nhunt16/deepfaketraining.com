@@ -21,7 +21,7 @@ function build_nav_link(string $href, string $label, string $currentScript, bool
 function render_header(string $title = 'Deepfake Defense'): void
 {
     global $config;
-    $appName = $config['app']['name'] ?? 'Deepfake Defense Training';
+    $appName = $config['app']['name'] ?? 'Deepfake Social Engineering Training';
     $user = current_user();
     $flash = get_flash();
     $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '') ?: 'index.php';

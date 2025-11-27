@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 $config = [
     'app' => [
-        'name' => 'Deepfake Defense Training',
+        'name' => 'Deepfake Social Engineering Training',
         'default_video_url' => 'https://videos.pexels.com/video-files/3130449/3130449-uhd_2560_1440_25fps.mp4',
         'beta_key' => 'BetaKeyChangeMe',
         'tts_voice' => [

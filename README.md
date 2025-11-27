@@ -1,4 +1,4 @@
-# Deepfake Defense Training
+# Deepfake Social Engineering Training
 
 An end-to-end LAMP application for the **deepfaketraining.com** experience. Learners log in, play an audio/video identification game, watch the awareness video, and track their progress. Admins upload new scenarios with associated media that are stored securely in MySQL.
 

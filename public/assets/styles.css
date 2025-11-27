@@ -324,6 +324,179 @@ td {
     color: var(--primary);
 }
 
+.copyable-command button.copied {
+    color: var(--primary);
+}
+
+[...truncated for brevity...]
+
+.voicemail-library-card {
+    border: 1px solid rgba(0, 255, 198, 0.1);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    background: rgba(3, 5, 12, 0.8);
+}
+
+.voicemail-library-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.voicemail-library-list li {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.5rem;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.6rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+}
+
+.voicemail-wave {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.voicemail-library-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.voicemail-library-label {
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.voicemail-library-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.voicemail-library-audio {
+    width: 100%;
+    max-width: 360px;
+    height: 32px;
+}
+
+.voicemail-delete-link {
+    color: var(--muted);
+    font-size: 0.85rem;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.voicemail-delete-link:hover {
+    color: var(--danger);
+}
+
+.voicemail-wave-track {
+    position: relative;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.voicemail-wave-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(120deg, var(--accent), var(--primary));
+}
+
+.voicemail-wave-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.voicemail-wave-label {
+    cursor: pointer;
+}
+
+.phish-card {
+    border: 1px solid rgba(0, 255, 198, 0.1);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    background: rgba(2, 4, 10, 0.9);
+    display: grid;
+    gap: 1rem;
+}
+
+.phish-voice-card {
+    border: 1px solid rgba(0, 255, 198, 0.1);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    background: rgba(5, 10, 18, 0.95);
+    display: grid;
+    gap: 1rem;
+}
+
+.phish-voice-card select,
+.phish-voice-card audio {
+    width: 100%;
+}
+
+.phish-voice-card audio {
+    max-width: 100%;
+}
+
+.phish-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.phish-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.phish-attachment {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0.75rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+}
+
+.phish-attachment.ready {
+    border-color: rgba(0, 255, 198, 0.4);
+    background: rgba(0, 255, 198, 0.08);
+}
+
+.phish-attachment.missing {
+    border-color: rgba(255, 77, 109, 0.4);
+    background: rgba(255, 77, 109, 0.08);
+}
+
+.phish-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.phish-log {
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 0.95rem;
+}
+
 .voicemail-card {
     margin-top: 2rem;
     display: grid;

@@ -42,9 +42,13 @@ function generate_voicemail_audio(string $text, ?string $presetKey = null, array
 
     $languageCode = $voiceConfig['language_code'] ?? 'en-US';
     $voiceName = $voiceConfig['name'] ?? '';
+    $supportsPitch = stripos($voiceName, 'chirp') === false;
+    if (!$supportsPitch && isset($voiceConfig['pitch'])) {
+        unset($voiceConfig['pitch']);
+    }
     $encoding = strtoupper($voiceConfig['audio_encoding'] ?? 'MP3');
     $speakingRate = (float)($voiceConfig['speaking_rate'] ?? 1.0);
-    $pitch = isset($voiceConfig['pitch']) ? (float)$voiceConfig['pitch'] : 0.0;
+    $pitch = isset($voiceConfig['pitch']) && $supportsPitch ? (float)$voiceConfig['pitch'] : 0.0;
     $effectsProfile = $voiceConfig['effects_profile'] ?? null;
 
     $encodingMap = [

@@ -1,6 +1,6 @@
 {
     "name": "deepfake/training",
-    "description": "Deepfake Defense Training platform",
+    "description": "Deepfake Social Engineering Training Platform",
     "type": "project",
     "require": {
         "google/cloud-text-to-speech": "^2.6"
