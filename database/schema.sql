@@ -60,3 +60,11 @@ CREATE TABLE IF NOT EXISTS simulation_progress (
     CONSTRAINT fk_simulation_progress_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS defense_progress (
+    user_id INT NOT NULL,
+    module_key VARCHAR(64) NOT NULL,
+    completed_at TIMESTAMP NULL,
+    PRIMARY KEY (user_id, module_key),
+    CONSTRAINT fk_defense_progress_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+

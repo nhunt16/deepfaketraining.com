@@ -26,6 +26,8 @@ $simulationTaskLabels = simulation_progress_task_labels();
 $simulationCompleted = simulation_progress_completed_count($simulationProgress);
 $simulationTotalTasks = simulation_progress_total_tasks();
 $simulationPercent = (int)round(($simulationCompleted / max(1, $simulationTotalTasks)) * 100);
+$defenseModules = defense_modules();
+$defenseProgress = defense_progress_get_all((int)$user['id']);
 
 $recentAttempts = $pdo->prepare(
     'SELECT s.title, sm.label, usa.is_correct, usa.attempted_at
@@ -41,9 +43,27 @@ $attemptRows = $recentAttempts->fetchAll();
 
 render_header('Dashboard');
 ?>
-<section class="panel grid grid-2">
+<style>
+.dashboard-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+}
+@media (max-width: 900px) {
+    .dashboard-columns {
+        grid-template-columns: 1fr;
+    }
+}
+.small-label {
+    margin: -0.4rem 0 0.9rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+}
+</style>
+<section class="panel dashboard-columns">
     <div class="score-card">
-        <h2>Deepfake Arena</h2>
+        <h2>Deepfake Challenge Game</h2>
+        <p class="muted small-label">Part 1 · Warmup</p>
         <p><strong>Total scenarios:</strong> <?= h((string)$totalScenarios) ?></p>
         <p><strong>Scenarios attempted:</strong> <?= h((string)$stats['covered']) ?></p>
         <p><strong>Accuracy:</strong>
@@ -59,7 +79,8 @@ render_header('Dashboard');
         <a class="btn" href="/game.php">Enter the arena</a>
     </div>
     <div class="score-card">
-        <h2>Awareness Briefing</h2>
+        <h2>Demonstration</h2>
+        <p class="muted small-label">Part 2 · Social Engineering Demonstration Video</p>
         <p>Status:
             <?php if ($progress['part2_completed']): ?>
                 <span class="tag" style="border-color:var(--primary); color:var(--primary)">Completed</span>
@@ -74,6 +95,7 @@ render_header('Dashboard');
     </div>
     <div class="score-card">
         <h2>Simulation Lab</h2>
+        <p class="muted small-label">Part 3 · Deepfake Social Engineering Simulation</p>
         <p><strong>Overall progress:</strong> <?= h((string)$simulationPercent) ?>% (<?= h((string)$simulationCompleted) ?> / <?= h((string)$simulationTotalTasks) ?> tasks)</p>
         <ul class="task-progress-list" style="list-style:none; padding-left:0; margin:0 0 1rem;">
             <?php foreach ($simulationTaskLabels as $taskKey => $label): ?>
@@ -88,6 +110,23 @@ render_header('Dashboard');
             <?php endforeach; ?>
         </ul>
         <a class="btn" href="/simulation.php">Resume simulation</a>
+    </div>
+    <div class="score-card">
+        <h2>Deepfake Defense</h2>
+        <p class="muted small-label">Part 4 · Deepfake Defense Resources</p>
+        <ul class="task-progress-list" style="list-style:none; padding-left:0; margin:0 0 1rem;">
+            <?php foreach ($defenseModules as $key => $meta): ?>
+                <?php $complete = defense_progress_is_complete($defenseProgress, $key); ?>
+                <?php $timestamp = $defenseProgress[$key] ?? null; ?>
+                <li style="margin-bottom:0.4rem; display:flex; justify-content:space-between; gap:0.5rem;">
+                    <span><?= $complete ? '✅' : '⬜' ?> <?= h($meta['title']) ?></span>
+                    <?php if ($timestamp): ?>
+                        <small style="color:var(--muted, #5f6b7a); white-space:nowrap;"><?= h($timestamp) ?></small>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+        <a class="btn" href="/defense.php"><?= $defenseProgress ? 'Review modules' : 'Start defense training' ?></a>
     </div>
 </section>
 
