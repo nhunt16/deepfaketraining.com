@@ -68,3 +68,12 @@ CREATE TABLE IF NOT EXISTS defense_progress (
     CONSTRAINT fk_defense_progress_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS game_progress (
+    user_id INT NOT NULL,
+    scenario_id INT NOT NULL,
+    completed_at TIMESTAMP NULL,
+    PRIMARY KEY (user_id, scenario_id),
+    CONSTRAINT fk_game_progress_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_game_progress_scenario FOREIGN KEY (scenario_id) REFERENCES scenarios(id) ON DELETE CASCADE
+);
+

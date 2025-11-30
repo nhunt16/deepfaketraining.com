@@ -1350,6 +1350,8 @@ render_header('Simulation Lab');
         <br><b>Task 3</b>&nbsp;&nbsp;&nbsp;&nbsp; Start Listener: start a meterpreter listener to catch the reverse shell
         <br><b>Task 4</b>&nbsp;&nbsp;&nbsp;&nbsp; Deliver the Phish: craft a phishing email with the trojan attachment and send the email and voicemail to target
         <br><b>Task 5</b>&nbsp;&nbsp;&nbsp;&nbsp; Catch the Shell: obtain Remote Code Execution (RCE) on the target's workstation and download the sensitive files.
+        <br>
+        <br>
         <div class="intro-scale-note">
             <span role="img" aria-label="warning">⚠️</span>
             In this example only one target is used, but the advantage of synthetic media is that it can be easily scaled to thousands of targets.

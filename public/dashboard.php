@@ -8,7 +8,8 @@ require_login();
 $user = current_user();
 $pdo = db();
 
-$totalScenarios = (int)$pdo->query('SELECT COUNT(*) FROM scenarios')->fetchColumn();
+$scenarioRows = $pdo->query('SELECT id, title FROM scenarios ORDER BY created_at ASC')->fetchAll();
+$totalScenarios = count($scenarioRows);
 
 $attemptStats = $pdo->prepare(
     'SELECT COUNT(*) AS attempts, COALESCE(SUM(is_correct), 0) AS correct, COUNT(DISTINCT scenario_id) AS covered
@@ -28,18 +29,42 @@ $simulationTotalTasks = simulation_progress_total_tasks();
 $simulationPercent = (int)round(($simulationCompleted / max(1, $simulationTotalTasks)) * 100);
 $defenseModules = defense_modules();
 $defenseProgress = defense_progress_get_all((int)$user['id']);
+$defenseCompleted = count(array_filter($defenseProgress));
+$defenseTotal = count($defenseModules);
+$defensePercent = $defenseTotal > 0 ? (int)round(($defenseCompleted / $defenseTotal) * 100) : 0;
+$gameProgress = game_progress_get((int)$user['id']);
+$gameCompleted = count($gameProgress);
+$gamePercent = $totalScenarios > 0 ? (int)round(($gameCompleted / $totalScenarios) * 100) : 0;
 
-$recentAttempts = $pdo->prepare(
-    'SELECT s.title, sm.label, usa.is_correct, usa.attempted_at
-     FROM user_scenario_attempts usa
-     INNER JOIN scenarios s ON usa.scenario_id = s.id
-     INNER JOIN scenario_media sm ON usa.media_id = sm.id
-     WHERE usa.user_id = ?
-     ORDER BY usa.attempted_at DESC
-     LIMIT 5'
-);
-$recentAttempts->execute([$user['id']]);
-$attemptRows = $recentAttempts->fetchAll();
+$completionLog = [];
+foreach ($scenarioRows as $index => $scenario) {
+    $scenarioId = (int)$scenario['id'];
+    if (!empty($gameProgress[$scenarioId])) {
+        $completionLog[] = [
+            'label' => sprintf('Scenario %d · %s', $index + 1, $scenario['title']),
+            'timestamp' => $gameProgress[$scenarioId],
+        ];
+    }
+}
+foreach ($simulationTaskLabels as $taskKey => $label) {
+    $timestamp = simulation_progress_task_timestamp($simulationProgress, $taskKey);
+    if ($timestamp) {
+        $completionLog[] = [
+            'label' => $label,
+            'timestamp' => $timestamp,
+        ];
+    }
+}
+foreach ($defenseModules as $key => $meta) {
+    $timestamp = $defenseProgress[$key] ?? null;
+    if ($timestamp) {
+        $completionLog[] = [
+            'label' => $meta['title'],
+            'timestamp' => $timestamp,
+        ];
+    }
+}
+usort($completionLog, static fn($a, $b) => strtotime($b['timestamp']) <=> strtotime($a['timestamp']));
 
 render_header('Dashboard');
 ?>
@@ -64,18 +89,23 @@ render_header('Dashboard');
     <div class="score-card">
         <h2>Deepfake Challenge Game</h2>
         <p class="muted small-label">Part 1 · Warmup</p>
-        <p><strong>Total scenarios:</strong> <?= h((string)$totalScenarios) ?></p>
-        <p><strong>Scenarios attempted:</strong> <?= h((string)$stats['covered']) ?></p>
-        <p><strong>Accuracy:</strong>
-            <?php
-            if ($stats['attempts'] > 0) {
-                $accuracy = round(($stats['correct'] / max(1, $stats['attempts'])) * 100);
-                echo h("{$accuracy}% ({$stats['correct']} / {$stats['attempts']})");
-            } else {
-                echo 'No attempts yet';
-            }
-            ?>
-        </p>
+        <p><strong>Overall progress:</strong> <?= h((string)$gamePercent) ?>% (<?= h((string)$gameCompleted) ?> / <?= h((string)$totalScenarios) ?> scenarios)</p>
+        <ul class="task-progress-list" style="list-style:none; padding-left:0; margin:0 0 1rem;">
+            <?php foreach ($scenarioRows as $index => $scenario): ?>
+                <?php $scenarioId = (int)$scenario['id']; ?>
+                <?php $complete = game_progress_is_complete($gameProgress, $scenarioId); ?>
+                <?php $timestamp = $gameProgress[$scenarioId] ?? null; ?>
+                <li style="margin-bottom:0.4rem; display:flex; justify-content:space-between; gap:0.5rem;">
+                    <span><?= $complete ? '✅' : '⬜' ?> Scenario <?= $index + 1 ?> · <?= h($scenario['title']) ?></span>
+                    <?php if ($complete && $timestamp): ?>
+                        <small style="color:var(--muted, #5f6b7a); white-space:nowrap;"><?= h($timestamp) ?></small>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+            <?php if (!$scenarioRows): ?>
+                <li>No scenarios uploaded yet.</li>
+            <?php endif; ?>
+        </ul>
         <a class="btn" href="/game.php">Enter the arena</a>
     </div>
     <div class="score-card">
@@ -114,6 +144,7 @@ render_header('Dashboard');
     <div class="score-card">
         <h2>Deepfake Defense</h2>
         <p class="muted small-label">Part 4 · Deepfake Defense Resources</p>
+        <p><strong>Overall progress:</strong> <?= h((string)$defensePercent) ?>% (<?= h((string)$defenseCompleted) ?> / <?= h((string)$defenseTotal) ?> modules)</p>
         <ul class="task-progress-list" style="list-style:none; padding-left:0; margin:0 0 1rem;">
             <?php foreach ($defenseModules as $key => $meta): ?>
                 <?php $complete = defense_progress_is_complete($defenseProgress, $key); ?>
@@ -131,30 +162,18 @@ render_header('Dashboard');
 </section>
 
 <section class="panel" style="margin-top:2rem;">
-    <h2>Recent attempts</h2>
-    <?php if ($attemptRows): ?>
-        <table>
-            <thead>
-            <tr>
-                <th>Scenario</th>
-                <th>Clip</th>
-                <th>Result</th>
-                <th>When</th>
-            </tr>
-            </thead>
-            <tbody>
-            <?php foreach ($attemptRows as $row): ?>
-                <tr>
-                    <td><?= h($row['title']) ?></td>
-                    <td><?= h($row['label']) ?></td>
-                    <td><?= $row['is_correct'] ? '✅ Correct' : '⚠️ Incorrect' ?></td>
-                    <td><?= h($row['attempted_at']) ?></td>
-                </tr>
+    <h2>Completed tasks</h2>
+    <?php if ($completionLog): ?>
+        <ul style="list-style:none; padding-left:0; margin:0;">
+            <?php foreach ($completionLog as $entry): ?>
+                <li style="display:flex; justify-content:space-between; gap:0.5rem; border-bottom:1px solid rgba(255,255,255,0.08); padding:0.6rem 0;">
+                    <span>✅ <?= h($entry['label']) ?></span>
+                    <small style="color:var(--muted, #5f6b7a); white-space:nowrap;"><?= h($entry['timestamp']) ?></small>
+                </li>
             <?php endforeach; ?>
-            </tbody>
-        </table>
+        </ul>
     <?php else: ?>
-        <p>No attempts logged yet. Start the game to see your stats.</p>
+        <p>No tasks completed yet. Progress updates will appear here once you finish a module.</p>
     <?php endif; ?>
 </section>
 <?php

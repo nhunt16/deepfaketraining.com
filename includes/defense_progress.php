@@ -6,6 +6,10 @@ const DEFENSE_MODULES = [
         'title' => 'Deepfake Audio Defense Cheatsheet',
         'subtitle' => 'Recognize, verify, and respond to voice cloning threats.',
     ],
+    'video' => [
+        'title' => 'Deepfake Video Defense Cheatsheet',
+        'subtitle' => 'Spot synthetic visuals and protect your teams from manipulated footage.',
+    ],
 ];
 
 function defense_progress_ensure_table(): void

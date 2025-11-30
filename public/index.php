@@ -10,7 +10,7 @@ render_header('Welcome');
     <div>
         <h1>Spot the Synthetic Threats</h1>
         <p>
-            Deepfake Defense Training helps your team practice identifying manipulated
+            Deepfake Social Engineering Training Platform helps your team practice identifying manipulated
             voice and video messages before bad actors can weaponize them.
         </p>
         <ul>
@@ -31,7 +31,7 @@ render_header('Welcome');
     </div>
     <div class="score-card">
         <h2>Training Modules</h2>
-        <p><strong>Part 1:</strong> Deepfake Challenge Arena</p>
+        <p><strong>Part 1:</strong> Deepfake Challenge Game</p>
         <p><strong>Part 2:</strong> Cyber deception briefing video</p>
         <p>Earn points for accurate identifications and log your completion of the briefing.</p>
     </div>

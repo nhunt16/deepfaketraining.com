@@ -29,6 +29,7 @@ require_once __DIR__ . '/layout.php';
 require_once __DIR__ . '/tts.php';
 require_once __DIR__ . '/simulation_progress.php';
 require_once __DIR__ . '/defense_progress.php';
+require_once __DIR__ . '/game_progress.php';
 require_once __DIR__ . '/beta_gate.php';
 
 enforce_beta_access();
