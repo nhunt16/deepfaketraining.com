@@ -1,4 +1,4 @@
-# **Manual Deepfake Audio Detection Training**
+# **Manual Deepfake Audio Detection Training using deepfaketraining.net**
 
 ## **Training Duration: 45–60 minutes**
 
@@ -6,17 +6,13 @@
 
 ## **Training Goal:**
 
-Equip staff to **recognize suspicious audio patterns**, **identify behavioral red flags**, and **follow escalation procedures** without needing technical expertise.
+Equip staff to **recognize suspicious audio patterns**, **identify behavioral red flags**, and **follow escalation procedures**.
 
 ### MODULE 1 — Why Deepfake Awareness Matters (5 minutes)
 
 Objectives:
 
-* Understand why deepfake audio is used in fraud  
-* Recognize typical targets (call centers, financial services, support desks)
-
-Key Points:
-
+* Understand why deepfake audio is used in fraud
 * Attackers use synthetic voices to:  
   * Impersonate customers  
   * Pretend to be supervisors or executives  
@@ -25,7 +21,7 @@ Key Points:
 
 ### MODULE 2 — What Deepfake Voices Sound Like (10 minutes)
 
-Play examples (generated with generic TTS voices).  
+Play examples from Part 1 · Warmup from deepfaketraining.net
 Learn to listen for:
 
 ### Auditory Red Flags
@@ -87,7 +83,7 @@ Follow your supervisor or fraud team procedure.
 
 ### MODULE 5 — Short Practice Exercise (10–15 minutes)
 
-4–6 prepared clips (mix real, synthetic, and replay)  
+Play clips (mix of real and synthetic) from Part 1 · Warmup from deepfaketraining.net
 For each clip, checkboxes for:
 
 1. Real or synthetic?  
@@ -100,6 +96,10 @@ For each clip, checkboxes for:
 1. Does the voice sound too perfect?  
 2. Is the behavior inconsistent or evasive?  
 3. Is something “off” about timing, emotion, or response?
+
+### MODULE 7 — Core Technologies and Software Tools (5 minutes)
+
+Ask participants to complete Part 4 · Deepfake Defense Resources from deepfaketraining.net
 
 ### Deepfake Audio Detection — Call Center Staff Quiz
 
@@ -173,7 +173,7 @@ A. “You sound fake, are you even real?”
 * Metallic or artificial tone  
 * Words that blend together too smoothly
 
-   **Correct answer:** all of above
+   **Correct answer:** All of above
 
 ### **9\. Which is a behavioral clue that a caller may be using synthetic audio.**
 
@@ -184,7 +184,7 @@ A. “You sound fake, are you even real?”
 * Responding too quickly or too slowly  
 * Showing no emotional reaction
 
- **Correct answer:** any one of above
+ **Correct answer:** Any one of above
 
 ### **10\. What should you do if you are unsure whether a caller is legitimate?**
 
