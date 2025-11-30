@@ -93,6 +93,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 set_flash('Clip not found.', 'warning');
             }
         }
+    } elseif ($action === 'update_clip_label') {
+        $clipId = (int)($_POST['clip_id'] ?? 0);
+        $scenarioId = (int)($_POST['scenario_id'] ?? 0);
+        $redirectScenarioId = $scenarioId;
+        $label = trim($_POST['label'] ?? '');
+
+        if ($clipId <= 0 || $scenarioId <= 0 || $label === '') {
+            set_flash('Clip ID, scenario, and label are required.', 'danger');
+        } else {
+            $stmt = $pdo->prepare('UPDATE scenario_media SET label = ? WHERE id = ? AND scenario_id = ?');
+            $stmt->execute([$label, $clipId, $scenarioId]);
+            if ($stmt->rowCount() > 0) {
+                set_flash('Clip label updated.', 'success');
+            } else {
+                set_flash('Clip not found or label unchanged.', 'warning');
+            }
+        }
+    } elseif ($action === 'delete_scenario') {
+        $scenarioId = (int)($_POST['scenario_id'] ?? 0);
+        if ($scenarioId <= 0) {
+            set_flash('Scenario not found.', 'danger');
+        } else {
+            $delete = $pdo->prepare('DELETE FROM scenarios WHERE id = ?');
+            $delete->execute([$scenarioId]);
+            if ($delete->rowCount() > 0) {
+                set_flash('Scenario deleted.', 'success');
+            } else {
+                set_flash('Scenario not found.', 'warning');
+            }
+        }
     }
 
     $target = '/admin.php';
@@ -170,6 +200,11 @@ render_header('Admin Console');
                 </label>
                 <button type="submit">Save changes</button>
             </form>
+            <form method="post" onsubmit="return confirm('Delete this entire scenario? All media will be removed.');" style="margin-top:1rem;">
+                <input type="hidden" name="action" value="delete_scenario">
+                <input type="hidden" name="scenario_id" value="<?= h((string)$activeScenario['id']) ?>">
+                <button type="submit" class="btn" style="background:#ff4d6d; color:#fff;">Delete scenario</button>
+            </form>
             <hr style="margin:2rem 0; border:0; border-top:1px solid rgba(255,255,255,0.1);">
             <h3>Add Clip</h3>
             <form method="post" enctype="multipart/form-data">
@@ -230,6 +265,13 @@ render_header('Admin Console');
                                 <?php endif; ?>
                             </td>
                             <td>
+                                <form method="post" style="display:inline-flex; gap:0.5rem; align-items:center;">
+                                    <input type="hidden" name="action" value="update_clip_label">
+                                    <input type="hidden" name="clip_id" value="<?= h((string)$clip['id']) ?>">
+                                    <input type="hidden" name="scenario_id" value="<?= h((string)$activeScenario['id']) ?>">
+                                    <input type="text" name="label" value="<?= h($clip['label']) ?>" style="width:150px;">
+                                    <button type="submit" class="btn" style="padding:0.35rem 0.75rem;">Save</button>
+                                </form>
                                 <form method="post" onsubmit="return confirm('Delete this clip?');" style="display:inline;">
                                     <input type="hidden" name="action" value="delete_clip">
                                     <input type="hidden" name="clip_id" value="<?= h((string)$clip['id']) ?>">
