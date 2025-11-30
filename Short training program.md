@@ -21,7 +21,7 @@ Objectives:
 
 ### MODULE 2 — What Deepfake Voices Sound Like (10 minutes)
 
-Play examples from Part 1 · Warmup from deepfaketraining.net
+Play examples from Part 1 · Warmup from deepfaketraining.net. 
 Learn to listen for:
 
 ### Auditory Red Flags
