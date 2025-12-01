@@ -9,6 +9,7 @@ $pdo = db();
 $user = current_user();
 $grokVideoPath = '/static_media/GrokTutorial.mp4';
 $soraVideoPath = '/static_media/SoraTutorial.mp4';
+$soraWatermarkVideoPath = '/static_media/SoraTutorialWatermark.mp4';
 $offenseStmt = $pdo->prepare('SELECT offense_modules FROM user_progress WHERE user_id = ?');
 $offenseStmt->execute([$user['id']]);
 $offenseRaw = $offenseStmt->fetchColumn();
@@ -231,6 +232,13 @@ render_header('Deepfake Offense');
         <h3>Sora tutorial walkthrough</h3>
         <video controls width="100%" preload="metadata">
             <source src="<?= h($soraVideoPath) ?>" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </article>
+    <article>
+        <h3>Remove Sora Watermark Tutorial</h3>
+        <video controls width="100%" preload="metadata">
+            <source src="<?= h($soraWatermarkVideoPath) ?>" type="video/mp4">
             Your browser does not support the video tag.
         </video>
     </article>
