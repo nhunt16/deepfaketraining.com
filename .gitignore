@@ -19,3 +19,4 @@ Thumbs.db
 vendor/
 composer.lock
 
+/static_media/

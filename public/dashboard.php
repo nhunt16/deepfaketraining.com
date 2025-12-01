@@ -109,8 +109,8 @@ render_header('Dashboard');
         <a class="btn" href="/game.php">Enter the arena</a>
     </div>
     <div class="score-card">
-        <h2>Demonstration</h2>
-        <p class="muted small-label">Part 2 · Social Engineering Demonstration Video</p>
+        <h2>Deepfake Offense</h2>
+        <p class="muted small-label">Part 2 · Grok Exploitation Tutorial</p>
         <p>Status:
             <?php if ($progress['part2_completed']): ?>
                 <span class="tag" style="border-color:var(--primary); color:var(--primary)">Completed</span>

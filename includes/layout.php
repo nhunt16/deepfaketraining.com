@@ -41,7 +41,7 @@ function render_header(string $title = 'Deepfake Defense'): void
             <?php if ($user): ?>
                 <?= build_nav_link('/dashboard.php', 'Dashboard', $currentScript) ?>
                 <?= build_nav_link('/game.php', 'Game', $currentScript) ?>
-                <?= build_nav_link('/video.php', 'Video', $currentScript) ?>
+                <?= build_nav_link('/video.php', 'Offense', $currentScript) ?>
                 <?= build_nav_link('/simulation.php', 'Simulation', $currentScript) ?>
                 <?= build_nav_link('/defense.php', 'Defense', $currentScript) ?>
                 <?php if ((int)$user['is_admin'] === 1): ?>
