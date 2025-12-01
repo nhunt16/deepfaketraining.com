@@ -56,6 +56,29 @@ render_header('Defense Training');
 .defense-progress-form .muted {
     margin: 0;
 }
+.task-status-anchor {
+    position: relative;
+}
+.task-status-chip {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.85rem;
+    font-weight: 500;
+    border-radius: 999px;
+    background: rgba(5, 6, 10, 0.65);
+    border: 1px solid currentColor;
+}
+.task-status-chip[data-state="completed"] {
+    color: #14b886;
+}
+.task-status-chip[data-state="pending"] {
+    color: #f97316;
+}
 </style>
 <section class="panel">
     <h1>Deepfake Defense Resources</h1>

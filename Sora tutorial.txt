@@ -1,0 +1,79 @@
+1) What is phishing?
+Phishing is a type of cyberattack where criminals attempt to trick you into giving away sensitive information — such as passwords, credit-card numbers, personal data, or access to accounts. They usually do this by pretending to be a trusted person or company.
+
+Common forms of phishing:
+Email phishing: fake emails that look legitimate.
+SMS (“smishing”): malicious links sent through text messages.
+Phone calls (“vishing”): someone impersonates a bank, service provider, etc.
+Social media scams: fake accounts sending links or requests.
+Spear-phishing: highly targeted attacks personalized to one victim.
+
+2) What is Sora.AI? [https://openai.com/sora/]
+In an AI model made by OpenAI that generates videos from text prompts. It can create high-quality video in various styles (cinematic, animated, life-like, etc) and generate realistic motion, lighting and scenes.
+
+*Other models that can also be useful is Grok AI developed by X. It lacks the realism, but has little to no limitations on policy (will come back to later)
+
+3) How AI generated video can be used in phishing
+AI-generated video (including Sora-style videos or deepfakes) can be used as a tool for advanced phishing schemes. We can utilize the software to impersonate someone using realistic audio and video to make a scam appear more legitimate. 
+
+Limitations [https://openai.com/index/launching-sora-responsibly/] : Sora 2 has policies and safeguards that prevent users from generating potentially harmful or inappropriate context. These limitations include but are not limited to:
+Prompts involving real people without consent
+Sexual content
+Violent or graphic prompts
+Illegal or dangerous activity
+Copyright or trademark characters
+Political misinformation
+Sensitive personal attributes (race, religion, disability, etc)
+Extreme realism used deceptively
+This is the main policy we need to work around
+
+General guidelines to Sora phishing: While we cannot violate the policies, we can use AI generated video to add substance and validity to other forms of phishing attacks such as social media or email. 
+Examples:
+Create a social media profile using AI generated context impersonating someone to populate a profile.
+This makes the profile seem realistic and makes direct messaging to a victim seem more genuine.
+Send a phishing email with a malicious link and use a Sora video impersonation to add legitimacy without violating Sora guidelines
+A video of an impersonation simply addressing the victim doesn’t violate Sora generation guidelines but could trick someone in an email being real
+Using Sora to generate videos of a catastrophe or accident involving the victim's property
+A video of a car accident involving the victim real life car followed by a malicious link (supposedly coming from insurance or a mechanic etc) could trick the victim to click on the link 
+
+
+[Insert Sora phishing tutorial here]
+
+
+Quiz:
+1. What is phishing?
+A. A harmless marketing technique
+B. A cyberattack designed to steal sensitive information
+C. A way to improve video quality
+D. A method for updating software
+
+2. Sora.AI is best described as:
+A. A password-stealing tool
+B. A deepfake detector
+C. An AI video generator created by OpenAI
+D. A cybersecurity scanner
+
+3. Which of the following CANNOT be generated in Sora due to safety policies?
+A. A fictional character in a fantasy world
+B. A landscape scene with mountains
+C. A cartoon cat playing guitar
+D. A real person without their consent
+
+4. Why might phishing attackers use AI-generated videos?
+A. Because the videos automatically block all scams
+B. To make scam messages seem more realistic and trustworthy
+C. To replace all written phishing attempts
+D. To encrypt user data
+
+5. Which of the following does violate Sora safety guidelines?
+A. A video of a harmless conversation
+B. A video of copyrighted characters like Spider-Man
+C. A video of a robot cooking
+D. A video describing a fictional planet
+
+6. How can Sora-generated videos assist phishing without breaking Sora’s policy?
+
+A. By generating explicit impersonations of private individuals
+B. By creating realistic videos of real harmful events
+C. By adding legitimacy to scam emails or fake profiles without violating video policies
+D. By generating political misinformation

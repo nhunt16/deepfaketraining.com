@@ -77,3 +77,6 @@ CREATE TABLE IF NOT EXISTS game_progress (
     CONSTRAINT fk_game_progress_scenario FOREIGN KEY (scenario_id) REFERENCES scenarios(id) ON DELETE CASCADE
 );
 
+ALTER TABLE user_progress
+    ADD COLUMN offense_modules JSON NULL;
+

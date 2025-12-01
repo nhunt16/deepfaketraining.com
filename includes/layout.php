@@ -36,7 +36,7 @@ function render_header(string $title = 'Deepfake Defense'): void
     </head>
     <body>
     <header>
-        <div class="logo"><?= h($appName) ?></div>
+        <div class="logo"><a href="/"><?= h($appName) ?></a></div>
         <nav>
             <?php if ($user): ?>
                 <?= build_nav_link('/dashboard.php', 'Dashboard', $currentScript) ?>

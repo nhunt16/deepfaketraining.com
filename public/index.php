@@ -8,15 +8,16 @@ render_header('Welcome');
 ?>
 <section class="panel grid grid-2">
     <div>
-        <h1>Spot the Synthetic Threats</h1>
+        <h1>Deepfake Social Engineering</h1>
         <p>
-            Deepfake Social Engineering Training Platform helps your team practice identifying manipulated
-            voice and video messages before bad actors can weaponize them.
+            This lab walks defenders through offensive and defensive tradecraft: spotting AI-generated media,
+            running simulated phishing, and hardening response playbooks.
         </p>
         <ul>
-            <li>Interactive, scenario-based gameplay with authentic clips.</li>
-            <li>Admin console for uploading new challenges securely.</li>
-            <li>Progress tracking for both the game and awareness briefing.</li>
+            <li><strong>Part 1 · Deepfake Challenge Game:</strong> Identify synthetic audio/video across live scenarios.</li>
+            <li><strong>Part 2 · Deepfake Offense:</strong> Grok &amp; Sora walkthroughs with embedded quizzes.</li>
+            <li><strong>Part 3 · Simulation Lab:</strong> Full kill-chain training with payload build, listener, and Meterpreter.</li>
+            <li><strong>Part 4 · Defense:</strong> Audio and video cheat sheets with completion tracking.</li>
         </ul>
         <?php if ($user): ?>
             <a class="btn" href="/dashboard.php">Go to dashboard</a>
@@ -31,9 +32,10 @@ render_header('Welcome');
     </div>
     <div class="score-card">
         <h2>Training Modules</h2>
-        <p><strong>Part 1:</strong> Deepfake Challenge Game</p>
-        <p><strong>Part 2:</strong> Cyber deception briefing video</p>
-        <p>Earn points for accurate identifications and log your completion of the briefing.</p>
+        <p><strong>Part 1:</strong> Challenge Game</p>
+        <p><strong>Part 2:</strong> Deepfake Offense (Grok + Sora)</p>
+        <p><strong>Part 3:</strong> Simulation Lab</p>
+        <p><strong>Part 4:</strong> Defense Resources</p>
     </div>
 </section>
 <?php

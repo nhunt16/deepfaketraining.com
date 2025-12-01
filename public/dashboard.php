@@ -18,9 +18,20 @@ $attemptStats = $pdo->prepare(
 $attemptStats->execute([$user['id']]);
 $stats = $attemptStats->fetch() ?: ['attempts' => 0, 'correct' => 0, 'covered' => 0];
 
-$progressStmt = $pdo->prepare('SELECT part2_completed, last_video_view FROM user_progress WHERE user_id = ?');
+$progressStmt = $pdo->prepare('SELECT part2_completed, last_video_view, offense_modules FROM user_progress WHERE user_id = ?');
 $progressStmt->execute([$user['id']]);
-$progress = $progressStmt->fetch() ?: ['part2_completed' => 0, 'last_video_view' => null];
+$progress = $progressStmt->fetch() ?: ['part2_completed' => 0, 'last_video_view' => null, 'offense_modules' => null];
+$offenseState = $progress['offense_modules'] ? json_decode($progress['offense_modules'], true) : [];
+if (!is_array($offenseState)) {
+    $offenseState = [];
+}
+$offenseModules = [
+    'module1' => ['title' => 'Module I · Grok AI'],
+    'module2' => ['title' => 'Module II · Sora AI'],
+];
+$offenseCompleted = count(array_filter($offenseState));
+$offenseTotal = count($offenseModules);
+$offensePercent = $offenseTotal > 0 ? (int)round(($offenseCompleted / $offenseTotal) * 100) : 0;
 
 $simulationProgress = simulation_progress_get((int)$user['id']);
 $simulationTaskLabels = simulation_progress_task_labels();
@@ -58,6 +69,15 @@ foreach ($simulationTaskLabels as $taskKey => $label) {
 foreach ($defenseModules as $key => $meta) {
     $timestamp = $defenseProgress[$key] ?? null;
     if ($timestamp) {
+        $completionLog[] = [
+            'label' => $meta['title'],
+            'timestamp' => $timestamp,
+        ];
+    }
+}
+foreach ($offenseModules as $key => $meta) {
+    $timestamp = $offenseState[$key] ?? null;
+    if (is_string($timestamp) && $timestamp !== '') {
         $completionLog[] = [
             'label' => $meta['title'],
             'timestamp' => $timestamp,
@@ -110,18 +130,21 @@ render_header('Dashboard');
     </div>
     <div class="score-card">
         <h2>Deepfake Offense</h2>
-        <p class="muted small-label">Part 2 · Grok Exploitation Tutorial</p>
-        <p>Status:
-            <?php if ($progress['part2_completed']): ?>
-                <span class="tag" style="border-color:var(--primary); color:var(--primary)">Completed</span>
-            <?php else: ?>
-                <span class="tag" style="border-color:var(--danger); color:var(--danger)">Pending</span>
-            <?php endif; ?>
-        </p>
-        <?php if ($progress['last_video_view']): ?>
-            <p>Last viewed: <?= h($progress['last_video_view']) ?></p>
-        <?php endif; ?>
-        <a class="btn" href="/video.php">Watch the briefing</a>
+        <p class="muted small-label">Part 2 · Grok &amp; Sora Operations</p>
+        <p><strong>Overall progress:</strong> <?= h((string)$offensePercent) ?>% (<?= h((string)$offenseCompleted) ?> / <?= h((string)$offenseTotal) ?> modules)</p>
+        <ul class="task-progress-list" style="list-style:none; padding-left:0; margin:0 0 1rem;">
+            <?php foreach ($offenseModules as $key => $meta): ?>
+                <?php $timestamp = $offenseState[$key] ?? null; ?>
+                <?php $complete = is_string($timestamp) && $timestamp !== ''; ?>
+                <li style="margin-bottom:0.4rem; display:flex; justify-content:space-between; gap:0.5rem;">
+                    <span><?= $complete ? '✅' : '⬜' ?> <?= h($meta['title']) ?></span>
+                    <?php if ($complete): ?>
+                        <small style="color:var(--muted, #5f6b7a); white-space:nowrap;"><?= h($timestamp) ?></small>
+                    <?php endif; ?>
+                </li>
+            <?php endforeach; ?>
+        </ul>
+        <a class="btn" href="/video.php">Launch offense training</a>
     </div>
     <div class="score-card">
         <h2>Simulation Lab</h2>
