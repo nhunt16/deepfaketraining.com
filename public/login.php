@@ -34,12 +34,12 @@ render_header('Sign In');
     <form method="post" class="form-auth">
         <label>
             Username
+            <input type="text" name="username" value="<?= h($username) ?>" required autofocus>
         </label>
-        <input type="text" name="username" value="<?= h($username) ?>" required autofocus>
         <label>
             Password
+            <input type="password" name="password" required>
         </label>
-        <input type="password" name="password" required>
         <button type="submit">Sign in</button>
     </form>
     <p>No account yet? <a href="/register.php">Create one</a>.</p>
