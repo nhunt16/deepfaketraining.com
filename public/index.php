@@ -31,6 +31,14 @@ render_header('Welcome');
         <p><strong>Part 4 · Defense:</strong> <br>Audio and video cheat sheets with completion tracking.</p>
     </div>
 </section>
+<div class="intro-scale-note" style="display:flex; justify-content:center;">
+    <span role="img" aria-label="warning">⚠️</span>
+    Tested on Firefox and Chrome only. We strongly recommend using one of these browsers for the best experience.
+</div>
+<div class="intro-scale-note" style="margin-top:0.5rem; display:flex; justify-content:center;">
+    <span role="img" aria-label="warning">⚠️</span>
+    If you encounter a server crash or HTTP 500 error, please email synth3ticl4bs@gmail.com so we can investigate quickly.
+</div>
 <?php
 render_footer();
 

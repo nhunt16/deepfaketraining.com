@@ -1356,6 +1356,10 @@ render_header('Simulation Lab');
             <span role="img" aria-label="warning">⚠️</span>
             In this example only one target is used, but the advantage of synthetic media is that it can be easily scaled to thousands of targets.
         </div>
+        <div class="intro-scale-note">
+            <span role="img" aria-label="warning">⚠️</span>
+            Follow the instructions carefully and click the ⟳ status icon after each task to confirm completion.
+        </div>
     </p>
 </section>
 

@@ -9,14 +9,22 @@ if (current_user()) {
 
 $errors = [];
 $username = '';
+$confirmPassword = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = $_POST['username'] ?? '';
     $password = $_POST['password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
 
-    $errors = register_user($username, $password);
+    if ($password !== $confirmPassword) {
+        $errors[] = 'Passwords do not match.';
+    }
+
     if (!$errors) {
-        redirect('/login.php');
+        $errors = register_user($username, $password);
+        if (!$errors) {
+            redirect('/login.php');
+        }
     }
 }
 
@@ -30,14 +38,14 @@ render_header('Create Account');
         </div>
     <?php endif; ?>
     <form method="post">
-        <label>
-            Username
-            <input type="text" name="username" value="<?= h($username) ?>" required autofocus>
-        </label>
-        <label>
-            Password
-            <input type="password" name="password" required minlength="8">
-        </label>
+        <label for="register-username">Username</label>
+        <input id="register-username" type="text" name="username" value="<?= h($username) ?>" required autofocus>
+
+        <label for="register-password">Password</label>
+        <input id="register-password" type="password" name="password" required minlength="8">
+
+        <label for="register-confirm-password">Confirm Password</label>
+        <input id="register-confirm-password" type="password" name="confirm_password" required minlength="8">
         <button type="submit">Create account</button>
     </form>
     <p>Already registered? <a href="/login.php">Sign in here</a>.</p>

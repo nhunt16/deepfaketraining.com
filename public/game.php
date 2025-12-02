@@ -192,27 +192,8 @@ render_header('Deepfake Arena');
     <?php endif; ?>
 </section>
 <style>
-.intro-scale-note {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.4rem;
-    margin-top: 0.25rem;
-    padding: 0.4rem 0.6rem;
-    background: rgba(255, 236, 150, 0.35);
-    border-radius: 6px;
-    font-weight: 300;
-    font-size: 0.9rem;
-    color: #ffd500;
-    line-height: 1.4;
-    border: 1px solid #ffd500;
-    text-align: center;
-}
 .scenario-warning {
     text-align: center;
-}
-.intro-scale-note span[role="img"] {
-    font-size: 1.2rem;
 }
 .media-grid-spacing {
     gap: 1.5rem;
