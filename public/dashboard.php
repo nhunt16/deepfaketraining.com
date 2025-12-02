@@ -46,6 +46,9 @@ $defensePercent = $defenseTotal > 0 ? (int)round(($defenseCompleted / $defenseTo
 $gameProgress = game_progress_get((int)$user['id']);
 $gameCompleted = count($gameProgress);
 $gamePercent = $totalScenarios > 0 ? (int)round(($gameCompleted / $totalScenarios) * 100) : 0;
+$totalTasks = max(1, $totalScenarios + $offenseTotal + $simulationTotalTasks + $defenseTotal);
+$completedTasks = $gameCompleted + $offenseCompleted + $simulationCompleted + $defenseCompleted;
+$overallPercent = (int)round(($completedTasks / $totalTasks) * 100);
 
 $completionLog = [];
 foreach ($scenarioRows as $index => $scenario) {
@@ -104,7 +107,56 @@ render_header('Dashboard');
     font-size: 0.85rem;
     color: var(--muted);
 }
+.dashboard-progress {
+    margin-bottom: 1.5rem;
+}
+.dashboard-progress-track {
+    position: relative;
+    width: 100%;
+    height: 0.85rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+.dashboard-progress-fill {
+    position: absolute;
+    inset: 0;
+    width: 0;
+    border-radius: 999px;
+    background: linear-gradient(120deg, #0c7bdc, #00ffc6);
+    transition: width 0.4s ease;
+}
+.dashboard-progress-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+.dashboard-progress-fraction {
+    font-size: 0.9rem;
+    color: var(--muted);
+    white-space: nowrap;
+}
 </style>
+<section class="panel dashboard-progress">
+    <div class="dashboard-progress-header">
+        <div>
+            <h2>Overall progress</h2>
+        </div>
+        <span class="dashboard-progress-fraction"><?= h($completedTasks . ' / ' . $totalTasks . ' tasks') ?></span>
+    </div>
+    <div
+        class="dashboard-progress-track"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="<?= h((string)$overallPercent) ?>"
+        aria-label="Overall task completion"
+    >
+        <div class="dashboard-progress-fill" style="width: <?= h((string)$overallPercent) ?>%;"></div>
+    </div>
+</section>
 <section class="panel dashboard-columns">
     <div class="score-card">
         <h2>Deepfake Challenge Game</h2>

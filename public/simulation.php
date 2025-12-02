@@ -1431,7 +1431,7 @@ render_header('Simulation Lab');
             Feed the AI voice actor with your own script to simulate phishing voicemails.
             <span class="voicemail-warning intro-scale-note">
                 <span role="img" aria-label="warning">⚠️</span>
-                Vishing pressure dramatically increases phishing success because hearing a confident voice lowers skepticism and shortens the victim's response window.
+                Vhishing can be used to dramatically increase the likelihood of a compromise due to social engineering.
             </span>
         </p>
     </div>
