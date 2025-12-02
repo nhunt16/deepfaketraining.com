@@ -1,4 +1,4 @@
-# **Manual Deepfake Audio Detection Training using deepfaketraining.net**
+# **Deepfake Audio Detection Training using deepfaketraining.net**
 
 ## **Training Duration: 45–60 minutes**
 
