@@ -8,8 +8,11 @@ require_login();
 $links = [
     ['name' => 'FreeSound', 'url' => 'https://freesound.org/', 'label' => 'Audio assets'],
     ['name' => 'NotebookLM', 'url' => 'https://notebooklm.google.com/', 'label' => 'Gen-AI Audio'],
-    ['name' => 'Grok', 'url' => 'https://grok.com/', 'label' => 'AI generation'],
-    ['name' => 'Sora', 'url' => 'https://openai.com/sora/', 'label' => 'AI generation'],
+    ['name' => 'Google Chirp 3', 'url' => 'https://docs.cloud.google.com/speech-to-text/docs/models/chirp-3', 'label' => 'Gen-AI Audio'],
+    ['name' => 'Google WaveNet', 'url' => 'https://deepmind.google/research/wavenet/', 'label' => 'Gen-AI Audio'],
+    ['name' => 'Google Neural2 ', 'url' => 'https://docs.cloud.google.com/text-to-speech/docs/list-voices-and-types#neural2_voices', 'label' => 'Gen-AI Audio'],
+    ['name' => 'Grok', 'url' => 'https://grok.com/', 'label' => 'Gen-AI Video'],
+    ['name' => 'Sora', 'url' => 'https://openai.com/sora/', 'label' => 'Gen-AI Video'],
     ['name' => 'Mitek IDLive Voice', 'url' => 'https://www.miteksystems.com/products/voice-liveness-detection', 'label' => 'Deepfake Detection Tools'],
     ['name' => 'Veridas Voice Shield', 'url' => 'https://veridas.com/en/voice-shield/', 'label' => 'Deepfake Detection Tools'],
     ['name' => 'Hive AI', 'url' => 'https://thehive.ai/', 'label' => 'Deepfake Detection Tools'],
@@ -44,6 +47,10 @@ render_header('Appendix');
         </tbody>
     </table>
 </section>
+<div class="intro-scale-note" style="margin-top:1rem; display:flex; justify-content:center;">
+    <span role="img" aria-label="warning">⚠️</span>
+    deepfaketraining.net code and content developed with the assistance of Gen-AI, including chatgpt.com and grok.com.
+</div>
 <?php
 render_footer();
 
