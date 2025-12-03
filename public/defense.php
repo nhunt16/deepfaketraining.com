@@ -121,14 +121,15 @@ render_header('Defense Training');
     <article>
         <h3>Software tools</h3>
         <ul>
-            <li><strong>Pindrop:</strong> real-time acoustic fingerprinting for call centers with behavioral scoring.</li>
-            <li><strong>Resemble Detect:</strong> API/console for spotting AI-generated speech across pipelines.</li>
-            <li><strong>Sensity AI:</strong> enterprise multimodal forensic analysis across audio, video, and imagery.</li>
-            <li><strong>Reality Defender:</strong> rapid API with detailed reports, widely used by media and public-sector teams.</li>
-            <li><strong>Truepic:</strong> cryptographic provenance from capture through verification for legal workflows.</li>
-            <li><strong>McAfee Deepfake Detector:</strong> privacy-preserving desktop scanning for individuals.</li>
-            <li><strong>Hive AI:</strong> content-moderation scale detection with confidence scoring.</li>
-            <li><strong>Veridas Voice Deepfake Detection:</strong> real-time liveness defense for contact centers.</li>
+            <li><strong><a href="https://www.pindrop.com/" target="_blank" rel="noopener">Pindrop</a>:</strong> real-time acoustic fingerprinting for call centers with behavioral scoring.</li>
+            <li><strong><a href="https://www.resemble.ai/detect/" target="_blank" rel="noopener">Resemble Detect</a>:</strong> API/console for spotting AI-generated speech across pipelines.</li>
+            <li><strong><a href="https://sensity.ai/" target="_blank" rel="noopener">Sensity AI</a>:</strong> enterprise multimodal forensic analysis across audio, video, and imagery.</li>
+            <li><strong><a href="https://www.realitydefender.com/" target="_blank" rel="noopener">Reality Defender</a>:</strong> rapid API with detailed reports, widely used by media and public-sector teams.</li>
+            <li><strong><a href="https://www.truepic.com/" target="_blank" rel="noopener">Truepic</a>:</strong> cryptographic provenance from capture through verification for legal workflows.</li>
+            <li><strong><a href="https://www.mcafee.com/ai/deepfake-detector/" target="_blank" rel="noopener">McAfee Deepfake Detector</a>:</strong> privacy-preserving desktop scanning for individuals.</li>
+            <li><strong><a href="https://thehive.ai/" target="_blank" rel="noopener">Hive AI</a>:</strong> content-moderation scale detection with confidence scoring.</li>
+            <li><strong><a href="https://veridas.com/en/voice-shield/" target="_blank" rel="noopener">Veridas Voice Shield</a>:</strong> real-time liveness defense for contact centers.</li>
+            <li><strong><a href="https://www.miteksystems.com/products/voice-liveness-detection" target="_blank" rel="noopener">Mitek IDLive Voice</a>:</strong> passive voice liveness for mobile identity and contact center workflows.</li>
             <li><strong>ID R&amp;D Voice Shield:</strong> anti-spoofing biometrics tuned for cloned voice interception.</li>
         </ul>
     </article>
@@ -136,35 +137,35 @@ render_header('Defense Training');
     <article>
         <h3>Detection tools by mission profile</h3>
         <h4>Real-time enterprise fraud prevention</h4>
-        <p class="muted">Pindrop · Reality Defender · Sensity AI</p>
+        <p class="muted"><a href="https://www.pindrop.com/" target="_blank" rel="noopener">Pindrop</a> · <a href="https://www.realitydefender.com/" target="_blank" rel="noopener">Reality Defender</a> · <a href="https://sensity.ai/" target="_blank" rel="noopener">Sensity AI</a></p>
         <ul>
-            <li>High accuracy (Pindrop advertises up to 99%) and low latency for live calls.</li>
+            <li>High accuracy (<a href="https://www.pindrop.com/" target="_blank" rel="noopener">Pindrop</a> advertises up to 99%) and low latency for live calls.</li>
             <li>API/SDK integrations with built-in liveness checks.</li>
         </ul>
 
         <h4>Banking, identity verification, KYC</h4>
-        <p class="muted">Veridas · ID R&amp;D · Microsoft Azure Audio Deepfake Detection</p>
+        <p class="muted"><a href="https://veridas.com/en/voice-shield/" target="_blank" rel="noopener">Veridas Voice Shield</a> · ID R&amp;D · Microsoft Azure Audio Deepfake Detection</p>
         <ul>
             <li>Regulatory-grade controls, hardened against TTS injection.</li>
             <li>Designed for step-up auth, account recovery, and government workflows.</li>
         </ul>
 
         <h4>Individual / media verification</h4>
-        <p class="muted">AI Voice Detector · McAfee Deepfake Detector</p>
+        <p class="muted">AI Voice Detector · <a href="https://www.mcafee.com/ai/deepfake-detector/" target="_blank" rel="noopener">McAfee Deepfake Detector</a></p>
         <ul>
             <li>Browser extensions or lightweight clients for consumer use.</li>
             <li>Fast assessments for suspected scams or viral misinformation.</li>
         </ul>
 
         <h4>Content platforms &amp; large-scale moderation</h4>
-        <p class="muted">Hive AI · Sensity AI · Reality Defender</p>
+        <p class="muted"><a href="https://thehive.ai/" target="_blank" rel="noopener">Hive AI</a> · <a href="https://sensity.ai/" target="_blank" rel="noopener">Sensity AI</a> · <a href="https://www.realitydefender.com/" target="_blank" rel="noopener">Reality Defender</a></p>
         <ul>
             <li>API-first, built for massive ingestion pipelines.</li>
             <li>Ideal for social media, newsrooms, or trust &amp; safety teams.</li>
         </ul>
 
         <h4>Digital forensics &amp; law enforcement</h4>
-        <p class="muted">Sensity AI · Truepic</p>
+        <p class="muted"><a href="https://sensity.ai/" target="_blank" rel="noopener">Sensity AI</a> · <a href="https://www.truepic.com/" target="_blank" rel="noopener">Truepic</a></p>
         <ul>
             <li>Forensic reports with metadata timelines and tamper scoring.</li>
             <li>Cryptographic provenance to preserve evidentiary value.</li>
